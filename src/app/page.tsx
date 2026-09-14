@@ -11,6 +11,8 @@ export default function DashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [apps, setApps] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   async function load() {
     const [s, j, a] = await Promise.all([
@@ -27,6 +29,24 @@ export default function DashboardPage() {
   useEffect(() => {
     load();
   }, []);
+
+  async function prepareTop() {
+    setBusy(true);
+    const res = await fetch("/api/jobs/prepare-top", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ limit: 12 }),
+    });
+    const d = await res.json();
+    setBusy(false);
+    setToast(
+      d.prepared
+        ? `Prepared ${d.prepared} application${d.prepared === 1 ? "" : "s"} — review them below`
+        : "No new matches to prepare",
+    );
+    setTimeout(() => setToast(null), 3500);
+    load();
+  }
 
   if (loading) return <p className="muted">Loading your pipeline…</p>;
 
@@ -87,8 +107,25 @@ export default function DashboardPage() {
       )}
 
       <div className="card">
-        <div className="section-label" style={{ marginTop: 0 }}>
-          Top matches to prepare
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div className="section-label" style={{ marginTop: 0 }}>
+            Top matches to prepare
+          </div>
+          {topMatches.length > 0 && (
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={prepareTop}
+              disabled={busy}
+            >
+              {busy ? "Preparing…" : `Prepare top ${Math.min(topMatches.length, 12)}`}
+            </button>
+          )}
         </div>
         {topMatches.length === 0 ? (
           <p className="muted">
@@ -99,6 +136,8 @@ export default function DashboardPage() {
           topMatches.map((j) => <JobRow key={j.id} j={j} />)
         )}
       </div>
+
+      {toast && <div className="toast">{toast}</div>}
     </>
   );
 }

@@ -18,7 +18,14 @@ import { DEFAULT_COMPANIES } from "./sources/companies";
 // Postgres/Neon later, reimplement these functions and nothing else changes.
 // ---------------------------------------------------------------------------
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// Local dev writes under ./data. On a read-only/serverless filesystem (Vercel)
+// fall back to a writable tmp dir so the app runs — though tmp is ephemeral, so
+// real deployments should swap this store for a database (see README).
+const DATA_DIR =
+  process.env.AUTOAPPLIER_DATA_DIR ||
+  (process.env.VERCEL
+    ? path.join("/tmp", "autoapplier-data")
+    : path.join(process.cwd(), "data"));
 
 const FILES = {
   profile: path.join(DATA_DIR, "profile.json"),

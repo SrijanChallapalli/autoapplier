@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/fetch",
+      "schedule": "0 13 * * *"
+    }
+  ],
+  "functions": {
+    "src/app/api/cron/fetch/route.ts": { "maxDuration": 300 },
+    "src/app/api/jobs/fetch/route.ts": { "maxDuration": 60 }
+  }
+}

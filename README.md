@@ -17,6 +17,10 @@ It reduces the repetitive parts of applying (re-typing the same info, re-reading
 7. **Track everything** — company, title, link, location, date applied, status, resume used, Q&A, recruiter, follow-up date, and interview stages.
 8. **Avoid duplicates** — won't prepare a second application to the same posting, and keeps the best of several similar roles at one company.
 9. **Learn** — approving, dismissing, or interviewing for jobs nudges future scores toward what you actually like.
+10. **Import from your resume** — upload a PDF/text resume and it extracts your skills to add to the profile (suggestion-only; never invented).
+11. **Draft answers with AI** (optional) — grounded, first-person drafts for essay/"why this company" questions, using only your real facts.
+12. **Export a packet** — one click copies a clean, portal-ready version of an application's answers.
+13. **Runs on a schedule** — a daily Vercel cron can pull fresh jobs automatically.
 
 The dashboard headline reads exactly like the goal:
 > "8 jobs found today. 5 matched your profile. 2 applications are ready to submit, 3 require your approval, and 0 need you to answer a question."
@@ -41,7 +45,12 @@ npm run seed   # optional: loads a demo profile + 8 sample postings
 npm run dev    # http://localhost:3000
 ```
 
-Then open **Profile** and replace the demo data with your real background, experience, projects, and resume variants. Saving recomputes every match.
+Then open **Profile** and replace the demo data with your real background — or upload your resume to pull in skills automatically. Saving recomputes every match. Click **Fetch live jobs** on the Jobs page to pull real openings.
+
+```bash
+npm test        # run the unit suite (parse / matching / prepare)
+npm run typecheck
+```
 
 ### Optional: LLM assistance
 
@@ -87,7 +96,16 @@ src/
 - **Ashby** — `api.ashbyhq.com/posting-api/job-board/<token>`
 - **Lever** — `api.lever.co/v0/postings/<token>`
 
-Companies live in `src/lib/sources/companies.ts` — add your own targets by dropping in the company slug from its board URL. Postings are filtered to early-career tech roles, deduped against what you already have, then scored. No API keys, no scraping.
+Companies live in `src/lib/sources/companies.ts` (and are editable at runtime on the **Settings** page) — add your own targets by dropping in the company slug from its board URL. Postings are filtered to early-career tech roles, deduped against what you already have, then scored. No API keys, no scraping.
+
+## Deployment (Vercel)
+
+The app is a standard Next.js App Router project and deploys to Vercel as-is. Two things to know:
+
+- **Cron** — `vercel.json` registers a daily job that hits `/api/cron/fetch` to pull fresh postings. Set a `CRON_SECRET` env var (Vercel sends it as a bearer token) to protect the endpoint.
+- **Persistence** — the JSON store writes to the local filesystem, which is **ephemeral on Vercel** (it falls back to `/tmp` there so nothing crashes, but data won't survive between invocations). For a real deployment, reimplement the functions in `src/lib/store.ts` against a database (e.g. Neon Postgres from the Vercel Marketplace) — every caller goes through that one module, so it's a contained change.
+
+Health check: `GET /api/health`. AI status: `GET /api/status`.
 
 ### Roadmap (deferred by design)
 - **Submission** — assisted browser autofill vs. review-only was intentionally left open; the review packet is the seam it plugs into.
