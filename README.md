@@ -8,7 +8,7 @@ It reduces the repetitive parts of applying (re-typing the same info, re-reading
 
 ## What it does
 
-1. **Import postings** — paste a job URL + description (or several at once, separated by a line of `---`). A scraper source can be added later behind the same import API.
+1. **Get real jobs** — click **Fetch live jobs** to pull current openings from ~30 companies via their *official public* ATS APIs (Greenhouse, Ashby, Lever — no scraping, no keys), or paste a posting manually (one, or several separated by a line of `---`).
 2. **Parse** each posting into structured signal: required vs. nice-to-have skills, min years, clearance/citizenship, sponsorship, salary, seniority.
 3. **Match & rank** against your profile, with an explainable 0-100 score and **High / Medium / Low confidence**.
 4. **Filter out** roles you're not eligible for (clearance, too senior, too much experience, excluded keywords) — they sink with a clear reason.
@@ -80,7 +80,16 @@ src/
 
 **Data** lives in `./data/*.json` (git-ignored — it holds your personal info). The `store.ts` functions are the only place that touches storage, so moving to a real database (e.g. Neon Postgres) is a localized change.
 
+### Live job sources
+
+`src/lib/sources/` fetches real postings from official public ATS APIs:
+- **Greenhouse** — `boards-api.greenhouse.io/v1/boards/<token>/jobs`
+- **Ashby** — `api.ashbyhq.com/posting-api/job-board/<token>`
+- **Lever** — `api.lever.co/v0/postings/<token>`
+
+Companies live in `src/lib/sources/companies.ts` — add your own targets by dropping in the company slug from its board URL. Postings are filtered to early-career tech roles, deduped against what you already have, then scored. No API keys, no scraping.
+
 ### Roadmap (deferred by design)
-- **Scraper source** — add a fetcher that feeds postings into `importAndMatch()`.
 - **Submission** — assisted browser autofill vs. review-only was intentionally left open; the review packet is the seam it plugs into.
-- **Auth + hosted DB** — for multi-device use on Vercel.
+- **Auth + hosted DB** — swap `store.ts` for Neon Postgres and deploy to Vercel for multi-device use.
+- **Aggregator search** — add an Adzuna/keyword source for broad discovery beyond the curated company list.
