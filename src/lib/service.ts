@@ -6,20 +6,28 @@ import type {
 } from "./types";
 import {
   addSignal,
+  getApplication,
   getApplicationByJob,
+  getJob,
   getProfile,
   listApplications,
   listJobs,
   listSignals,
   newId,
-  saveJobs,
+  updateJobs,
   upsertApplication,
   upsertJob,
 } from "./store";
 import { parseJob, type ParseInput } from "./parse";
 import { matchJob, rankJobs } from "./matching";
 import { prepareApplication, isDuplicate } from "./prepare";
-import { aiRefineJob } from "./ai";
+import {
+  aiRefineJob,
+  aiMatchNarrative,
+  aiDraftAnswer,
+  aiEnabled,
+  aiModel,
+} from "./ai";
 import { extractSkills } from "./skills";
 import { fetchLivePostings, type IngestOptions } from "./sources";
 
@@ -74,7 +82,6 @@ export async function ingestLiveJobs(
 ): Promise<IngestSummary> {
   const profile = await getProfile();
   const signals = await listSignals();
-  const existing = await listJobs();
 
   // Match the live pull to the user's declared seniority by default.
   const internOnly =
@@ -83,44 +90,46 @@ export async function ingestLiveJobs(
   const { postings, companiesReturned, companiesTried } =
     await fetchLivePostings({ ...opts, internOnly });
 
-  const seenUrls = new Set(
-    existing.map((j) => j.url).filter(Boolean) as string[],
-  );
-  const seenKeys = new Set(
-    existing.map((j) => `${j.company}::${j.title}`.toLowerCase()),
-  );
-
-  const newJobs = [];
+  let added = 0;
   let skippedDuplicates = 0;
-  for (const p of postings) {
-    const key = `${p.company}::${p.title}`.toLowerCase();
-    if ((p.url && seenUrls.has(p.url)) || seenKeys.has(key)) {
-      skippedDuplicates++;
-      continue;
+
+  // Dedup + write under the jobs lock so a concurrent fetch can't lose rows.
+  await updateJobs((existing) => {
+    const seenUrls = new Set(
+      existing.map((j) => j.url).filter(Boolean) as string[],
+    );
+    const seenKeys = new Set(
+      existing.map((j) => `${j.company}::${j.title}`.toLowerCase()),
+    );
+    const newJobs = [];
+    for (const p of postings) {
+      const key = `${p.company}::${p.title}`.toLowerCase();
+      if ((p.url && seenUrls.has(p.url)) || seenKeys.has(key)) {
+        skippedDuplicates++;
+        continue;
+      }
+      seenKeys.add(key);
+      if (p.url) seenUrls.add(p.url);
+
+      const job = parseJob({
+        text: p.text,
+        url: p.url,
+        company: p.company,
+        title: p.title,
+        location: p.location,
+      });
+      job.source = "scraper";
+      if (p.remote) job.remote = true;
+      job.match = matchJob(job, { profile, signals });
+      newJobs.push(job);
     }
-    seenKeys.add(key);
-    if (p.url) seenUrls.add(p.url);
-
-    const job = parseJob({
-      text: p.text,
-      url: p.url,
-      company: p.company,
-      title: p.title,
-      location: p.location,
-    });
-    job.source = "scraper";
-    if (p.remote) job.remote = true;
-    job.match = matchJob(job, { profile, signals });
-    newJobs.push(job);
-  }
-
-  if (newJobs.length) {
-    await saveJobs([...newJobs, ...existing]);
-  }
+    added = newJobs.length;
+    return [...newJobs, ...existing];
+  });
 
   return {
     found: postings.length,
-    added: newJobs.length,
+    added,
     skippedDuplicates,
     companiesReturned,
     companiesTried,
@@ -131,11 +140,12 @@ export async function ingestLiveJobs(
 export async function rematchAll(): Promise<void> {
   const profile = await getProfile();
   const signals = await listSignals();
-  const jobs = await listJobs();
-  for (const job of jobs) {
-    job.match = matchJob(job, { profile, signals });
-  }
-  await saveJobs(jobs);
+  await updateJobs((jobs) => {
+    for (const job of jobs) {
+      job.match = matchJob(job, { profile, signals });
+    }
+    return jobs;
+  });
 }
 
 export async function getRankedJobs(): Promise<Job[]> {
@@ -162,8 +172,44 @@ export async function prepareForJob(
 
   const profile = await getProfile();
   const app = prepareApplication(job, profile);
+
+  // If AI is enabled, enrich the "why you're a good match" summary with a
+  // grounded narrative. Best-effort — never blocks preparation.
+  if (aiEnabled()) {
+    const narrative = await aiMatchNarrative(job, profile);
+    if (narrative) app.matchSummary = narrative;
+  }
+
   await upsertApplication(app);
   return { application: app };
+}
+
+// Draft a grounded answer to an application question using the LLM.
+export async function draftAnswerForApplication(
+  applicationId: string,
+  question: string,
+): Promise<{ draft?: string; error?: string }> {
+  if (!aiEnabled()) {
+    return {
+      error:
+        "AI drafting is off. Add an AI Gateway key (AI_GATEWAY_API_KEY) to enable it.",
+    };
+  }
+  const app = await getApplication(applicationId);
+  if (!app) return { error: "Application not found" };
+  const job = await getJob(app.jobId);
+  const profile = await getProfile();
+  const draft = await aiDraftAnswer(
+    question,
+    job ?? ({ company: app.company, title: app.title } as never),
+    profile,
+  );
+  if (!draft) return { error: "The AI draft request failed — try again." };
+  return { draft };
+}
+
+export function aiStatus(): { enabled: boolean; model: string | null } {
+  return { enabled: aiEnabled(), model: aiEnabled() ? aiModel() : null };
 }
 
 // --- Dashboard summary ------------------------------------------------------
