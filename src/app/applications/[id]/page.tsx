@@ -8,6 +8,7 @@ import type {
   InterviewStage,
 } from "@/lib/types";
 import { StatusBadge, ConfidenceBadge, fmtDate } from "@/components/ui";
+import { buildPacket } from "@/lib/packet";
 
 const STATUS_OPTIONS: ApplicationStatus[] = [
   "draft",
@@ -53,6 +54,24 @@ export default function ApplicationDetailPage({
     if (msg) flash(msg);
   }
 
+  async function copyPacket() {
+    if (!app) return;
+    const text = buildPacket(app);
+    try {
+      await navigator.clipboard.writeText(text);
+      flash("Application packet copied to clipboard");
+    } catch {
+      // Clipboard can be blocked; fall back to a prompt-friendly window.
+      const w = window.open("", "_blank");
+      if (w) {
+        w.document.write(`<pre>${text.replace(/</g, "&lt;")}</pre>`);
+        flash("Opened packet in a new tab");
+      } else {
+        flash("Copy blocked — select the answers manually");
+      }
+    }
+  }
+
   if (!app) return <p className="muted">Loading…</p>;
 
   const unusualAnswers = app.answers.filter((a) => a.unusual);
@@ -95,8 +114,19 @@ export default function ApplicationDetailPage({
 
       {/* --- Pre-submission review summary --- */}
       <div className="card">
-        <div className="section-label" style={{ marginTop: 0 }}>
-          Pre-submission summary
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div className="section-label" style={{ marginTop: 0 }}>
+            Pre-submission summary
+          </div>
+          <button className="btn btn-sm" onClick={copyPacket}>
+            ⧉ Copy packet
+          </button>
         </div>
         <SummaryRow label="Company" value={app.company} />
         <SummaryRow label="Position" value={app.title} />
