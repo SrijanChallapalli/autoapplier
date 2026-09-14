@@ -104,7 +104,7 @@ const TECH_RE =
 const EXCLUDE_RE =
   /\b(recruit|recruiting|recruiter|talent|sourcer|sales|account (executive|manager)|customer (success|experience)|marketing|people|hr\b|program manager|business|operations|finance|accounting|legal|communications|community|partnerships?|design(er)?|content|brand|support associate)\b/i;
 
-function isRelevant(p: RawPosting, opts: IngestOptions): boolean {
+export function isRelevant(p: RawPosting, opts: IngestOptions): boolean {
   const hay = `${p.title} ${p.text.slice(0, 400)}`;
   // Intern/early-career must be in the TITLE, so full-time roles whose
   // descriptions merely mention an internship program don't leak in.

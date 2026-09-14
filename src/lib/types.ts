@@ -193,6 +193,7 @@ export interface Application {
 
   recruiter?: Recruiter;
   interviewStages: InterviewStage[];
+  coverLetter?: string;
 
   createdAt: string;
   updatedAt: string;

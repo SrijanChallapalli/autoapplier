@@ -10,6 +10,7 @@ type Filter = "matched" | "all" | "dismissed";
 export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [filter, setFilter] = useState<Filter>("matched");
+  const [query, setQuery] = useState("");
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -88,11 +89,17 @@ export default function JobsPage() {
     load();
   }
 
+  const q = query.trim().toLowerCase();
   const filtered = jobs.filter((j) => {
-    if (filter === "dismissed") return j.dismissed;
-    if (j.dismissed) return false;
-    if (filter === "matched")
-      return j.match?.recommended && j.match?.eligible;
+    if (filter === "dismissed") {
+      if (!j.dismissed) return false;
+    } else {
+      if (j.dismissed) return false;
+      if (filter === "matched" && !(j.match?.recommended && j.match?.eligible))
+        return false;
+    }
+    if (q && !`${j.title} ${j.company} ${j.location ?? ""}`.toLowerCase().includes(q))
+      return false;
     return true;
   });
 
@@ -176,6 +183,14 @@ export default function JobsPage() {
         >
           Dismissed ({jobs.filter((j) => j.dismissed).length})
         </button>
+      </div>
+
+      <div className="field" style={{ marginBottom: 14 }}>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by title, company, or location…"
+        />
       </div>
 
       <div className="card">
