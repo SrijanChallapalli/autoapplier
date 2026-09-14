@@ -74,6 +74,54 @@ export async function aiRefineJob(
   }
 }
 
+export function aiModel(): string {
+  return process.env.AI_MODEL || "anthropic/claude-sonnet-5";
+}
+
+// Draft an answer to an application question, grounded strictly in the profile.
+// Used for essay / "why this company" / short-answer prompts. Returns null if
+// AI is disabled or the call fails, so the UI falls back to manual entry.
+export async function aiDraftAnswer(
+  question: string,
+  job: Job,
+  profile: Profile,
+): Promise<string | null> {
+  const facts = {
+    name: profile.fullName,
+    university: profile.university,
+    major: profile.major,
+    graduation: profile.graduationDate,
+    skills: profile.skills,
+    interests: profile.preferences.interests,
+    experience: profile.experience.map((e) => ({
+      title: e.title,
+      company: e.company,
+      bullets: e.bullets,
+    })),
+    projects: profile.projects.map((p) => ({
+      name: p.name,
+      description: p.description,
+      bullets: p.bullets,
+    })),
+  };
+  return chat(
+    [
+      "You help a candidate draft honest answers to job-application questions.",
+      "Rules you must follow:",
+      "- Use ONLY the candidate facts provided. Never invent experience, skills, numbers, or qualifications.",
+      "- If the question asks about something not in the facts, write a truthful answer that draws on the closest real facts, and do not fabricate.",
+      "- Write in first person, natural and specific, no clichés or filler.",
+      "- Keep it concise unless the question implies an essay; then ~150-220 words.",
+      "- Output only the answer text, no preamble.",
+    ].join("\n"),
+    `Company: ${job.company}\nRole: ${job.title}\n\nQuestion: ${question}\n\nCandidate facts (JSON):\n${JSON.stringify(
+      facts,
+      null,
+      2,
+    )}`,
+  );
+}
+
 // A natural-language "why you're a good match" paragraph for the review summary.
 // Grounded strictly in the provided profile facts.
 export async function aiMatchNarrative(

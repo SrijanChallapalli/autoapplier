@@ -40,9 +40,28 @@ async function readJson<T>(file: string, fallback: T): Promise<T> {
 
 async function writeJson(file: string, data: unknown): Promise<void> {
   await ensureDir();
-  const tmp = `${file}.tmp`;
+  const tmp = `${file}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
   await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
   await fs.rename(tmp, file);
+}
+
+// Per-file async mutex. Read-modify-write sequences (upserts, deletes) must run
+// under the lock so concurrent requests can't clobber each other's writes —
+// this matters when the live fetch adds dozens of jobs while other requests run.
+const locks = new Map<string, Promise<void>>();
+
+async function withLock<T>(file: string, fn: () => Promise<T>): Promise<T> {
+  const prev = locks.get(file) ?? Promise.resolve();
+  // Chain: the next holder waits for this one to settle (never rejects the chain).
+  const run = prev.then(fn, fn);
+  locks.set(
+    file,
+    run.then(
+      () => undefined,
+      () => undefined,
+    ),
+  );
+  return run;
 }
 
 export function newId(prefix = "id"): string {
@@ -60,7 +79,7 @@ export async function getProfile(): Promise<Profile> {
 
 export async function saveProfile(profile: Profile): Promise<Profile> {
   const next = { ...profile, updatedAt: new Date().toISOString() };
-  await writeJson(FILES.profile, next);
+  await withLock(FILES.profile, () => writeJson(FILES.profile, next));
   return next;
 }
 
@@ -76,21 +95,38 @@ export async function getJob(id: string): Promise<Job | undefined> {
 }
 
 export async function upsertJob(job: Job): Promise<Job> {
-  const jobs = await listJobs();
-  const idx = jobs.findIndex((j) => j.id === job.id);
-  if (idx >= 0) jobs[idx] = job;
-  else jobs.unshift(job);
-  await writeJson(FILES.jobs, jobs);
-  return job;
+  return withLock(FILES.jobs, async () => {
+    const jobs = await listJobs();
+    const idx = jobs.findIndex((j) => j.id === job.id);
+    if (idx >= 0) jobs[idx] = job;
+    else jobs.unshift(job);
+    await writeJson(FILES.jobs, jobs);
+    return job;
+  });
 }
 
 export async function saveJobs(jobs: Job[]): Promise<void> {
-  await writeJson(FILES.jobs, jobs);
+  await withLock(FILES.jobs, () => writeJson(FILES.jobs, jobs));
+}
+
+// Atomic read-modify-write over the whole jobs collection, under the file lock.
+// Used by bulk operations (live ingest, rematch) so they never lose writes.
+export async function updateJobs(
+  fn: (jobs: Job[]) => Job[] | Promise<Job[]>,
+): Promise<Job[]> {
+  return withLock(FILES.jobs, async () => {
+    const jobs = await listJobs();
+    const next = await fn(jobs);
+    await writeJson(FILES.jobs, next);
+    return next;
+  });
 }
 
 export async function deleteJob(id: string): Promise<void> {
-  const jobs = (await listJobs()).filter((j) => j.id !== id);
-  await writeJson(FILES.jobs, jobs);
+  await withLock(FILES.jobs, async () => {
+    const jobs = (await listJobs()).filter((j) => j.id !== id);
+    await writeJson(FILES.jobs, jobs);
+  });
 }
 
 // --- Applications ----------------------------------------------------------
@@ -116,18 +152,22 @@ export async function getApplicationByJob(
 export async function upsertApplication(
   app: Application,
 ): Promise<Application> {
-  const apps = await listApplications();
-  const idx = apps.findIndex((a) => a.id === app.id);
-  const next = { ...app, updatedAt: new Date().toISOString() };
-  if (idx >= 0) apps[idx] = next;
-  else apps.unshift(next);
-  await writeJson(FILES.applications, apps);
-  return next;
+  return withLock(FILES.applications, async () => {
+    const apps = await listApplications();
+    const idx = apps.findIndex((a) => a.id === app.id);
+    const next = { ...app, updatedAt: new Date().toISOString() };
+    if (idx >= 0) apps[idx] = next;
+    else apps.unshift(next);
+    await writeJson(FILES.applications, apps);
+    return next;
+  });
 }
 
 export async function deleteApplication(id: string): Promise<void> {
-  const apps = (await listApplications()).filter((a) => a.id !== id);
-  await writeJson(FILES.applications, apps);
+  await withLock(FILES.applications, async () => {
+    const apps = (await listApplications()).filter((a) => a.id !== id);
+    await writeJson(FILES.applications, apps);
+  });
 }
 
 // --- Learning signals ------------------------------------------------------
@@ -139,8 +179,10 @@ export async function listSignals(): Promise<PreferenceSignal[]> {
 export async function addSignal(
   signal: PreferenceSignal,
 ): Promise<PreferenceSignal> {
-  const signals = await listSignals();
-  signals.unshift(signal);
-  await writeJson(FILES.signals, signals);
-  return signal;
+  return withLock(FILES.signals, async () => {
+    const signals = await listSignals();
+    signals.unshift(signal);
+    await writeJson(FILES.signals, signals);
+    return signal;
+  });
 }

@@ -144,6 +144,7 @@ export default function ApplicationDetailPage({
           {app.openQuestions.map((q, i) => (
             <OpenQuestion
               key={i}
+              appId={app.id}
               question={q}
               onAnswer={(answer) => {
                 const answers = [
@@ -363,31 +364,60 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 }
 
 function OpenQuestion({
+  appId,
   question,
   onAnswer,
 }: {
+  appId: string;
   question: string;
   onAnswer: (answer: string) => void;
 }) {
   const [val, setVal] = useState("");
+  const [drafting, setDrafting] = useState(false);
+  const [draftErr, setDraftErr] = useState<string | null>(null);
+
+  async function draft() {
+    setDrafting(true);
+    setDraftErr(null);
+    // Strip the "(category) " prefix the detector adds before sending.
+    const clean = question.replace(/^\([^)]*\)\s*/, "");
+    const res = await fetch(`/api/applications/${appId}/draft`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: clean }),
+    });
+    const data = await res.json();
+    setDrafting(false);
+    if (data.draft) setVal(data.draft);
+    else setDraftErr(data.error ?? "Draft failed");
+  }
+
   return (
     <div className="field">
       <label>{question}</label>
-      <div className="row">
-        <textarea
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          style={{ minHeight: 60 }}
-        />
+      <textarea
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        style={{ minHeight: 60 }}
+        placeholder="Type your answer, or draft one with AI…"
+      />
+      <div className="btn-row" style={{ marginTop: 8 }}>
+        <button
+          className="btn btn-sm btn-primary"
+          disabled={!val.trim()}
+          onClick={() => onAnswer(val.trim())}
+        >
+          Save answer
+        </button>
+        <button className="btn btn-sm" disabled={drafting} onClick={draft}>
+          {drafting ? "Drafting…" : "✨ Draft with AI"}
+        </button>
       </div>
-      <button
-        className="btn btn-sm btn-primary"
-        style={{ marginTop: 8 }}
-        disabled={!val.trim()}
-        onClick={() => onAnswer(val.trim())}
-      >
-        Save answer
-      </button>
+      {draftErr && (
+        <p className="muted" style={{ color: "var(--amber)", marginTop: 6 }}>
+          {draftErr}
+        </p>
+      )}
     </div>
   );
 }
