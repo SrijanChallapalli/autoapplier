@@ -13,6 +13,7 @@ export default function JobsPage() {
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
 
@@ -55,6 +56,29 @@ export default function JobsPage() {
     }
   }
 
+  async function fetchLive() {
+    setFetching(true);
+    flash("Pulling live openings from company job boards…");
+    const res = await fetch("/api/jobs/fetch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const s = await res.json();
+    setFetching(false);
+    if (typeof s.added === "number") {
+      flash(
+        `Fetched ${s.found} relevant roles from ${s.companiesReturned} companies · added ${s.added} new` +
+          (s.skippedDuplicates
+            ? `, skipped ${s.skippedDuplicates} already seen`
+            : ""),
+      );
+      load();
+    } else {
+      flash("Live fetch failed — try again");
+    }
+  }
+
   async function dismiss(id: string, dismissed: boolean) {
     await fetch(`/api/jobs/${id}`, {
       method: "PATCH",
@@ -87,12 +111,17 @@ export default function JobsPage() {
             Paste a posting and the assistant parses, scores, and ranks it.
           </p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowImport((s) => !s)}
-        >
-          {showImport ? "Close" : "+ Import posting"}
-        </button>
+        <div className="btn-row">
+          <button className="btn" onClick={fetchLive} disabled={fetching}>
+            {fetching ? "Fetching…" : "⟳ Fetch live jobs"}
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowImport((s) => !s)}
+          >
+            {showImport ? "Close" : "+ Import posting"}
+          </button>
+        </div>
       </div>
 
       {showImport && (

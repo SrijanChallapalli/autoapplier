@@ -21,6 +21,7 @@ import { matchJob, rankJobs } from "./matching";
 import { prepareApplication, isDuplicate } from "./prepare";
 import { aiRefineJob } from "./ai";
 import { extractSkills } from "./skills";
+import { fetchLivePostings, type IngestOptions } from "./sources";
 
 // ---------------------------------------------------------------------------
 // High-level operations the API routes call. Orchestrates parse -> match ->
@@ -56,6 +57,74 @@ function stripEmpty<T extends object>(obj: T): Partial<T> {
     if (v !== undefined && v !== "") (out as Record<string, unknown>)[k] = v;
   }
   return out;
+}
+
+// Pull live postings from official ATS APIs, dedupe against what we already
+// have, then parse + match each new one. Returns a summary for the UI.
+export interface IngestSummary {
+  found: number; // relevant postings returned across all boards
+  added: number; // new jobs saved
+  skippedDuplicates: number;
+  companiesReturned: number;
+  companiesTried: number;
+}
+
+export async function ingestLiveJobs(
+  opts: IngestOptions = {},
+): Promise<IngestSummary> {
+  const profile = await getProfile();
+  const signals = await listSignals();
+  const existing = await listJobs();
+
+  // Match the live pull to the user's declared seniority by default.
+  const internOnly =
+    opts.internOnly ?? profile.preferences.seniority === "internship";
+
+  const { postings, companiesReturned, companiesTried } =
+    await fetchLivePostings({ ...opts, internOnly });
+
+  const seenUrls = new Set(
+    existing.map((j) => j.url).filter(Boolean) as string[],
+  );
+  const seenKeys = new Set(
+    existing.map((j) => `${j.company}::${j.title}`.toLowerCase()),
+  );
+
+  const newJobs = [];
+  let skippedDuplicates = 0;
+  for (const p of postings) {
+    const key = `${p.company}::${p.title}`.toLowerCase();
+    if ((p.url && seenUrls.has(p.url)) || seenKeys.has(key)) {
+      skippedDuplicates++;
+      continue;
+    }
+    seenKeys.add(key);
+    if (p.url) seenUrls.add(p.url);
+
+    const job = parseJob({
+      text: p.text,
+      url: p.url,
+      company: p.company,
+      title: p.title,
+      location: p.location,
+    });
+    job.source = "scraper";
+    if (p.remote) job.remote = true;
+    job.match = matchJob(job, { profile, signals });
+    newJobs.push(job);
+  }
+
+  if (newJobs.length) {
+    await saveJobs([...newJobs, ...existing]);
+  }
+
+  return {
+    found: postings.length,
+    added: newJobs.length,
+    skippedDuplicates,
+    companiesReturned,
+    companiesTried,
+  };
 }
 
 // Recompute matches for every job (e.g. after the profile changes).
