@@ -33,6 +33,12 @@ export function buildPacket(app: Application): string {
     L.push("");
   }
 
+  if (app.coverLetter && app.coverLetter.trim()) {
+    L.push("## Cover letter");
+    L.push(app.coverLetter.trim());
+    L.push("");
+  }
+
   if (app.openQuestions.length) {
     L.push("## Still needs answers");
     for (const q of app.openQuestions) L.push(`- ${q}`);

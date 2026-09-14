@@ -122,6 +122,45 @@ export async function aiDraftAnswer(
   );
 }
 
+// A grounded cover letter for a specific role. Uses only real profile facts.
+export async function aiCoverLetter(
+  job: Job,
+  profile: Profile,
+): Promise<string | null> {
+  const facts = {
+    name: profile.fullName,
+    university: profile.university,
+    major: profile.major,
+    graduation: profile.graduationDate,
+    skills: profile.skills,
+    experience: profile.experience.map((e) => ({
+      title: e.title,
+      company: e.company,
+      bullets: e.bullets,
+    })),
+    projects: profile.projects.map((p) => ({
+      name: p.name,
+      description: p.description,
+      bullets: p.bullets,
+    })),
+  };
+  return chat(
+    [
+      "Write a concise, specific cover letter (about 200-280 words) for this role.",
+      "Rules:",
+      "- Use ONLY the provided candidate facts. Never invent employers, skills, metrics, or achievements.",
+      "- Connect the candidate's real experience/projects to what the role needs.",
+      "- First person, warm but professional, no clichés ('I am writing to express'), no fabricated enthusiasm about specifics you don't have.",
+      "- Do not include address blocks or a date; start with 'Dear Hiring Team,'.",
+      "- Output only the letter.",
+    ].join("\n"),
+    `Role: ${job.title} at ${job.company}\n\nRole description:\n${(job.description ?? "").slice(
+      0,
+      2500,
+    )}\n\nCandidate facts (JSON):\n${JSON.stringify(facts, null, 2)}`,
+  );
+}
+
 // A natural-language "why you're a good match" paragraph for the review summary.
 // Grounded strictly in the provided profile facts.
 export async function aiMatchNarrative(

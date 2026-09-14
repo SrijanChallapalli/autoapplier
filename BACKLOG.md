@@ -29,9 +29,9 @@ Self-directed tickets toward a production-ready app. Checked = shipped & verifie
 
 ## Round 2
 - [x] T16 Pluggable storage backend + Postgres/Neon adapter (DATABASE_URL), PGlite-tested
-- [ ] T17 Cover-letter generation (grounded, opt-in) per application
-- [ ] T18 Expand tests: sources relevance filter, html strip, resume, packet
-- [ ] T19 Jobs search/filter UX
+- [x] T17 Cover-letter generation (grounded, opt-in) per application
+- [x] T18 Expand tests: sources relevance filter, html strip, resume, packet
+- [x] T19 Jobs search/filter UX
 
 ## Deferred (needs your input)
 - Neon provisioning + Vercel deploy (needs your Vercel login) — code is ready;

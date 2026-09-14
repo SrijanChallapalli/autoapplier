@@ -54,6 +54,22 @@ export default function ApplicationDetailPage({
     if (msg) flash(msg);
   }
 
+  const [genLetter, setGenLetter] = useState(false);
+  async function generateLetter() {
+    setGenLetter(true);
+    const res = await fetch(`/api/applications/${id}/cover-letter`, {
+      method: "POST",
+    });
+    const data = await res.json();
+    setGenLetter(false);
+    if (data.coverLetter) {
+      setApp((a) => (a ? { ...a, coverLetter: data.coverLetter } : a));
+      flash("Cover letter generated");
+    } else {
+      flash(data.error ?? "Couldn't generate");
+    }
+  }
+
   async function copyPacket() {
     if (!app) return;
     const text = buildPacket(app);
@@ -364,6 +380,40 @@ export default function ApplicationDetailPage({
               "Stage added",
             )
           }
+        />
+      </div>
+
+      {/* --- Cover letter --- */}
+      <div className="card">
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div className="section-label" style={{ marginTop: 0 }}>
+            Cover letter
+          </div>
+          <button className="btn btn-sm" onClick={generateLetter} disabled={genLetter}>
+            {genLetter
+              ? "Writing…"
+              : app.coverLetter
+                ? "✨ Regenerate"
+                : "✨ Generate with AI"}
+          </button>
+        </div>
+        <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+          Grounded in your real experience only. Edit freely; edits save on blur.
+        </p>
+        <textarea
+          value={app.coverLetter ?? ""}
+          onChange={(e) =>
+            setApp((a) => (a ? { ...a, coverLetter: e.target.value } : a))
+          }
+          onBlur={(e) => patch({ coverLetter: e.target.value })}
+          placeholder="Generate a draft with AI, or write your own…"
+          style={{ minHeight: 160 }}
         />
       </div>
 

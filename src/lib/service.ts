@@ -26,6 +26,7 @@ import {
   aiRefineJob,
   aiMatchNarrative,
   aiDraftAnswer,
+  aiCoverLetter,
   aiEnabled,
   aiModel,
 } from "./ai";
@@ -235,6 +236,34 @@ export async function draftAnswerForApplication(
   );
   if (!draft) return { error: "The AI draft request failed — try again." };
   return { draft };
+}
+
+// Generate a grounded cover letter for an application and persist it.
+export async function generateCoverLetter(
+  applicationId: string,
+): Promise<{ coverLetter?: string; error?: string }> {
+  if (!aiEnabled()) {
+    return {
+      error:
+        "Cover letters need an AI Gateway key (AI_GATEWAY_API_KEY). Add one to enable.",
+    };
+  }
+  const app = await getApplication(applicationId);
+  if (!app) return { error: "Application not found" };
+  const job = await getJob(app.jobId);
+  const profile = await getProfile();
+  const letter = await aiCoverLetter(
+    job ??
+      ({
+        company: app.company,
+        title: app.title,
+        description: "",
+      } as never),
+    profile,
+  );
+  if (!letter) return { error: "The cover letter request failed — try again." };
+  await upsertApplication({ ...app, coverLetter: letter });
+  return { coverLetter: letter };
 }
 
 export function aiStatus(): { enabled: boolean; model: string | null } {
