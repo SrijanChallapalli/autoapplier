@@ -10,8 +10,28 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const body = await req.json();
   const text: string = (body.text ?? "").toString();
-  if (!text.trim()) {
-    return NextResponse.json({ error: "text is required" }, { status: 400 });
+  const url: string | undefined = body.url?.toString().trim() || undefined;
+
+  // Allow URL-only imports (the server fetches and parses the posting).
+  if (!text.trim() && !url) {
+    return NextResponse.json(
+      { error: "Provide a job description or a URL" },
+      { status: 400 },
+    );
+  }
+
+  if (!text.trim() && url) {
+    const job = await importAndMatch({ text: "", url });
+    if (job.description.length < 40) {
+      return NextResponse.json(
+        {
+          error:
+            "Couldn't extract this posting automatically — paste the description text instead.",
+        },
+        { status: 422 },
+      );
+    }
+    return NextResponse.json({ jobs: [job] });
   }
 
   const chunks = text.split(/\n-{3,}\n/).map((c) => c.trim()).filter(Boolean);
@@ -19,7 +39,7 @@ export async function POST(req: Request) {
   for (const chunk of chunks.length ? chunks : [text]) {
     const job = await importAndMatch({
       text: chunk,
-      url: body.url,
+      url,
       company: chunks.length > 1 ? undefined : body.company,
       title: chunks.length > 1 ? undefined : body.title,
       location: body.location,

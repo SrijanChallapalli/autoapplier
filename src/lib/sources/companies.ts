@@ -5,13 +5,8 @@
 // board URL (e.g. boards.greenhouse.io/<token>, jobs.ashbyhq.com/<token>,
 // jobs.lever.co/<token>).
 
-export type Ats = "greenhouse" | "ashby" | "lever";
-
-export interface CompanyBoard {
-  name: string;
-  ats: Ats;
-  token: string;
-}
+import type { CompanyBoard } from "../types";
+export type { Ats, CompanyBoard } from "../types";
 
 export const DEFAULT_COMPANIES: CompanyBoard[] = [
   // Greenhouse
