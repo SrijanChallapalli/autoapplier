@@ -22,6 +22,13 @@ export default function ProfilePage() {
   const [p, setP] = useState<Profile | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [resume, setResume] = useState<{
+    fileName: string;
+    skills: string[];
+    links: string[];
+    chars: number;
+  } | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetch("/api/profile")
@@ -48,6 +55,37 @@ export default function ProfilePage() {
     setTimeout(() => setToast(null), 3000);
   }
 
+  async function uploadResume(file: File) {
+    setUploading(true);
+    setResume(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/profile/resume", { method: "POST", body: fd });
+    const data = await res.json();
+    setUploading(false);
+    if (data.skills) {
+      setResume(data);
+      flash(
+        `Read ${data.chars.toLocaleString()} characters · found ${data.skills.length} skills`,
+      );
+    } else {
+      flash(data.error ?? "Couldn't read that file");
+    }
+  }
+
+  function flash(m: string) {
+    setToast(m);
+    setTimeout(() => setToast(null), 3200);
+  }
+
+  function mergeResumeSkills() {
+    if (!p || !resume) return;
+    const have = new Set(p.skills.map((s) => s.toLowerCase()));
+    const added = resume.skills.filter((s) => !have.has(s.toLowerCase()));
+    set("skills", [...p.skills, ...added]);
+    flash(`Added ${added.length} new skill${added.length === 1 ? "" : "s"} — remember to Save`);
+  }
+
   if (!p) return <p className="muted">Loading…</p>;
 
   return (
@@ -69,6 +107,69 @@ export default function ProfilePage() {
         <button className="btn btn-primary" onClick={save} disabled={busy}>
           {busy ? "Saving…" : "Save profile"}
         </button>
+      </div>
+
+      {/* Resume import */}
+      <div className="card">
+        <div className="section-label" style={{ marginTop: 0 }}>
+          Import from resume
+        </div>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Upload a PDF or text resume and we&apos;ll pull out your skills to add
+          here. Nothing is invented — everything comes from your file.
+        </p>
+        <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+          <label
+            className="btn"
+            style={{ cursor: "pointer", display: "inline-block" }}
+          >
+            {uploading ? "Reading…" : "Choose resume (PDF / .txt)"}
+            <input
+              type="file"
+              accept=".pdf,.txt,.md,application/pdf,text/plain"
+              style={{ display: "none" }}
+              disabled={uploading}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) uploadResume(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {resume && (
+            <span className="muted">
+              {resume.fileName} · {resume.skills.length} skills found
+            </span>
+          )}
+        </div>
+        {resume && (
+          <>
+            <div className="chips" style={{ marginTop: 12 }}>
+              {resume.skills.map((s) => (
+                <span key={s} className="chip match">
+                  {s}
+                </span>
+              ))}
+              {resume.skills.length === 0 && (
+                <span className="muted">No known skills detected.</span>
+              )}
+            </div>
+            {resume.links.length > 0 && (
+              <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>
+                Links found: {resume.links.slice(0, 4).join("  ·  ")}
+              </p>
+            )}
+            {resume.skills.length > 0 && (
+              <button
+                className="btn btn-sm btn-primary"
+                style={{ marginTop: 10 }}
+                onClick={mergeResumeSkills}
+              >
+                Add new skills to profile
+              </button>
+            )}
+          </>
+        )}
       </div>
 
       {/* Identity */}
