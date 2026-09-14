@@ -201,6 +201,26 @@ export interface Application {
   notes?: string;
 }
 
+// --- Settings ---------------------------------------------------------------
+
+export type Ats = "greenhouse" | "ashby" | "lever";
+
+export interface CompanyBoard {
+  name: string;
+  ats: Ats;
+  token: string;
+}
+
+export interface Settings {
+  // Company boards to pull live jobs from. Empty => use the built-in defaults.
+  companies: CompanyBoard[];
+  // Only pull internship / early-career roles.
+  internOnly: boolean;
+  // Optional keyword filter applied to titles/descriptions on fetch.
+  fetchKeywords: string[];
+  updatedAt: string;
+}
+
 // --- Learning ---------------------------------------------------------------
 // Lightweight signal captured from user actions to nudge future matching.
 

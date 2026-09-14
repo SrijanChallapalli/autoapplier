@@ -155,6 +155,106 @@ export async function fetchLivePostings(
   };
 }
 
+// --- Import a single posting from its URL -----------------------------------
+// Uses the official API when the URL is a known ATS (clean text), otherwise
+// falls back to fetching the page HTML and stripping it to text.
+export async function fetchPostingFromUrl(
+  url: string,
+): Promise<RawPosting | null> {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return null;
+  }
+  const host = u.hostname.toLowerCase();
+
+  // Greenhouse: .../{token}/jobs/{id}  or  ?gh_jid={id}
+  if (host.includes("greenhouse.io")) {
+    const parts = u.pathname.split("/").filter(Boolean);
+    const jobsIdx = parts.indexOf("jobs");
+    const token = parts[0];
+    const id = u.searchParams.get("gh_jid") ?? (jobsIdx >= 0 ? parts[jobsIdx + 1] : undefined);
+    if (token && id) {
+      const j = (await getJson(
+        `https://boards-api.greenhouse.io/v1/boards/${token}/jobs/${id}`,
+      )) as GhJob | null;
+      if (j?.title) {
+        return {
+          company: titleCase(token),
+          title: j.title,
+          location: j.location?.name,
+          url,
+          text: htmlToText(j.content ?? ""),
+        };
+      }
+    }
+  }
+
+  // Lever: jobs.lever.co/{token}/{id}
+  if (host.includes("lever.co")) {
+    const parts = u.pathname.split("/").filter(Boolean);
+    const token = parts[0];
+    const id = parts[1];
+    if (token && id) {
+      const j = (await getJson(
+        `https://api.lever.co/v0/postings/${token}/${id}`,
+      )) as LeverJob | null;
+      if (j?.text) {
+        return {
+          company: titleCase(token),
+          title: j.text,
+          location: j.categories?.location,
+          url,
+          text: j.descriptionPlain || htmlToText(j.description ?? ""),
+        };
+      }
+    }
+  }
+
+  // Generic: fetch the page and strip to text.
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Accept: "text/html",
+        "User-Agent":
+          "Mozilla/5.0 (compatible; AutoApplier/1.0; +job-search assistant)",
+      },
+      signal: AbortSignal.timeout(TIMEOUT),
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const title =
+      html.match(/<meta property="og:title" content="([^"]+)"/i)?.[1] ??
+      html.match(/<title>([^<]+)<\/title>/i)?.[1] ??
+      "Untitled role";
+    const text = htmlToText(
+      html
+        .replace(/<script[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style[\s\S]*?<\/style>/gi, " "),
+    );
+    if (text.length < 80) return null; // page had no readable content
+    return {
+      company: titleCase(host.replace(/^www\./, "").split(".")[0]),
+      title: decodeTitle(title),
+      url,
+      text: text.slice(0, 12000),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function titleCase(s: string): string {
+  return s
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
+function decodeTitle(s: string): string {
+  return s.replace(/\s+[-|·]\s+.*$/, "").trim();
+}
+
 // --- Upstream response shapes (partial) ------------------------------------
 
 interface GhJob {

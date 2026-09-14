@@ -10,6 +10,7 @@ import {
   getApplicationByJob,
   getJob,
   getProfile,
+  getSettings,
   listApplications,
   listJobs,
   listSignals,
@@ -29,7 +30,11 @@ import {
   aiModel,
 } from "./ai";
 import { extractSkills } from "./skills";
-import { fetchLivePostings, type IngestOptions } from "./sources";
+import {
+  fetchLivePostings,
+  fetchPostingFromUrl,
+  type IngestOptions,
+} from "./sources";
 
 // ---------------------------------------------------------------------------
 // High-level operations the API routes call. Orchestrates parse -> match ->
@@ -42,7 +47,23 @@ export async function importAndMatch(
 ): Promise<Job> {
   const profile = await getProfile();
   const signals = await listSignals();
-  let job = parseJob(input);
+
+  // If we were given a URL but no real text, fetch and extract the posting.
+  let resolved = input;
+  if ((!input.text || input.text.trim().length < 40) && input.url) {
+    const posting = await fetchPostingFromUrl(input.url);
+    if (posting) {
+      resolved = {
+        text: posting.text,
+        url: input.url,
+        company: input.company || posting.company,
+        title: input.title || posting.title,
+        location: input.location || posting.location,
+      };
+    }
+  }
+
+  let job = parseJob(resolved);
 
   // Optional LLM refinement of company/title/location when the heuristic is weak.
   if (opts.useAI !== false) {
@@ -82,13 +103,21 @@ export async function ingestLiveJobs(
 ): Promise<IngestSummary> {
   const profile = await getProfile();
   const signals = await listSignals();
+  const settings = await getSettings();
 
-  // Match the live pull to the user's declared seniority by default.
-  const internOnly =
-    opts.internOnly ?? profile.preferences.seniority === "internship";
+  const internOnly = opts.internOnly ?? settings.internOnly;
+  const companies = opts.companies ?? settings.companies;
+  const keywords =
+    opts.keywords ??
+    (settings.fetchKeywords.length ? settings.fetchKeywords : undefined);
 
   const { postings, companiesReturned, companiesTried } =
-    await fetchLivePostings({ ...opts, internOnly });
+    await fetchLivePostings({
+      companies,
+      internOnly,
+      keywords,
+      perCompanyLimit: opts.perCompanyLimit,
+    });
 
   let added = 0;
   let skippedDuplicates = 0;

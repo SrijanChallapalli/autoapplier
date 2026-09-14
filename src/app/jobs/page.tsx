@@ -32,7 +32,7 @@ export default function JobsPage() {
 
   async function importJob(e: React.FormEvent) {
     e.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() && !url.trim()) return;
     setBusy(true);
     const res = await fetch("/api/jobs/import", {
       method: "POST",
@@ -52,7 +52,7 @@ export default function JobsPage() {
       );
       load();
     } else {
-      flash(data.error ?? "Import failed");
+      flash(data.error ?? "Import failed — try pasting the description text.");
     }
   }
 
@@ -128,17 +128,20 @@ export default function JobsPage() {
         <div className="card">
           <form onSubmit={importJob}>
             <div className="field">
-              <label>Job posting URL (optional)</label>
+              <label>
+                Job posting URL — paste one and we&apos;ll fetch it, or leave
+                blank and paste the text below
+              </label>
               <input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://company.com/careers/swe-intern"
+                placeholder="https://boards.greenhouse.io/acme/jobs/123"
               />
             </div>
             <div className="field">
               <label>
-                Paste the job description (tip: paste several at once, separated
-                by a line of ---)
+                Job description (optional if a URL is given; paste several at
+                once separated by a line of ---)
               </label>
               <textarea
                 value={text}

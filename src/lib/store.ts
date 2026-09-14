@@ -5,8 +5,10 @@ import type {
   Job,
   PreferenceSignal,
   Profile,
+  Settings,
 } from "./types";
 import { defaultProfile } from "./defaultProfile";
+import { DEFAULT_COMPANIES } from "./sources/companies";
 
 // ---------------------------------------------------------------------------
 // A tiny file-backed JSON store. One file per collection under ./data.
@@ -23,7 +25,17 @@ const FILES = {
   jobs: path.join(DATA_DIR, "jobs.json"),
   applications: path.join(DATA_DIR, "applications.json"),
   signals: path.join(DATA_DIR, "signals.json"),
+  settings: path.join(DATA_DIR, "settings.json"),
 } as const;
+
+export function defaultSettings(): Settings {
+  return {
+    companies: DEFAULT_COMPANIES,
+    internOnly: true,
+    fetchKeywords: [],
+    updatedAt: new Date().toISOString(),
+  };
+}
 
 async function ensureDir() {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -80,6 +92,27 @@ export async function getProfile(): Promise<Profile> {
 export async function saveProfile(profile: Profile): Promise<Profile> {
   const next = { ...profile, updatedAt: new Date().toISOString() };
   await withLock(FILES.profile, () => writeJson(FILES.profile, next));
+  return next;
+}
+
+// --- Settings --------------------------------------------------------------
+
+export async function getSettings(): Promise<Settings> {
+  const s = await readJson<Settings | null>(FILES.settings, null);
+  if (!s) return defaultSettings();
+  // Merge so new fields get defaults if the stored file predates them.
+  const d = defaultSettings();
+  return {
+    companies: s.companies?.length ? s.companies : d.companies,
+    internOnly: s.internOnly ?? d.internOnly,
+    fetchKeywords: s.fetchKeywords ?? d.fetchKeywords,
+    updatedAt: s.updatedAt ?? d.updatedAt,
+  };
+}
+
+export async function saveSettings(settings: Settings): Promise<Settings> {
+  const next = { ...settings, updatedAt: new Date().toISOString() };
+  await withLock(FILES.settings, () => writeJson(FILES.settings, next));
   return next;
 }
 
