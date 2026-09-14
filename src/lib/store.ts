@@ -1,5 +1,3 @@
-import { promises as fs } from "fs";
-import path from "path";
 import type {
   Application,
   Job,
@@ -9,30 +7,20 @@ import type {
 } from "./types";
 import { defaultProfile } from "./defaultProfile";
 import { DEFAULT_COMPANIES } from "./sources/companies";
+import { getBackend } from "./db/backend";
 
 // ---------------------------------------------------------------------------
-// A tiny file-backed JSON store. One file per collection under ./data.
-//
-// This is deliberately simple so the app "just runs" with no database. The API
-// surface (getProfile, listJobs, upsertJob, ...) is the seam: to move to
-// Postgres/Neon later, reimplement these functions and nothing else changes.
+// The store persists a handful of JSON documents keyed by collection name.
+// Where they live (JSON files vs Postgres) is decided in db/backend.ts by the
+// DATABASE_URL env var; everything here is backend-agnostic.
 // ---------------------------------------------------------------------------
 
-// Local dev writes under ./data. On a read-only/serverless filesystem (Vercel)
-// fall back to a writable tmp dir so the app runs — though tmp is ephemeral, so
-// real deployments should swap this store for a database (see README).
-const DATA_DIR =
-  process.env.AUTOAPPLIER_DATA_DIR ||
-  (process.env.VERCEL
-    ? path.join("/tmp", "autoapplier-data")
-    : path.join(process.cwd(), "data"));
-
-const FILES = {
-  profile: path.join(DATA_DIR, "profile.json"),
-  jobs: path.join(DATA_DIR, "jobs.json"),
-  applications: path.join(DATA_DIR, "applications.json"),
-  signals: path.join(DATA_DIR, "signals.json"),
-  settings: path.join(DATA_DIR, "settings.json"),
+const KEYS = {
+  profile: "profile",
+  jobs: "jobs",
+  applications: "applications",
+  signals: "signals",
+  settings: "settings",
 } as const;
 
 export function defaultSettings(): Settings {
@@ -44,37 +32,26 @@ export function defaultSettings(): Settings {
   };
 }
 
-async function ensureDir() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+async function read<T>(key: string, fallback: T): Promise<T> {
+  return (await getBackend()).read(key, fallback);
 }
 
-async function readJson<T>(file: string, fallback: T): Promise<T> {
-  try {
-    const raw = await fs.readFile(file, "utf8");
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
+async function write(key: string, value: unknown): Promise<void> {
+  return (await getBackend()).write(key, value);
 }
 
-async function writeJson(file: string, data: unknown): Promise<void> {
-  await ensureDir();
-  const tmp = `${file}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
-  await fs.rename(tmp, file);
-}
-
-// Per-file async mutex. Read-modify-write sequences (upserts, deletes) must run
+// Per-key async mutex. Read-modify-write sequences (upserts, deletes) must run
 // under the lock so concurrent requests can't clobber each other's writes —
 // this matters when the live fetch adds dozens of jobs while other requests run.
+// (In-process; single-instance. A multi-instance deploy would use row locks.)
 const locks = new Map<string, Promise<void>>();
 
-async function withLock<T>(file: string, fn: () => Promise<T>): Promise<T> {
-  const prev = locks.get(file) ?? Promise.resolve();
+async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const prev = locks.get(key) ?? Promise.resolve();
   // Chain: the next holder waits for this one to settle (never rejects the chain).
   const run = prev.then(fn, fn);
   locks.set(
-    file,
+    key,
     run.then(
       () => undefined,
       () => undefined,
@@ -92,20 +69,20 @@ export function newId(prefix = "id"): string {
 // --- Profile ---------------------------------------------------------------
 
 export async function getProfile(): Promise<Profile> {
-  const p = await readJson<Profile | null>(FILES.profile, null);
+  const p = await read<Profile | null>(KEYS.profile, null);
   return p ?? defaultProfile();
 }
 
 export async function saveProfile(profile: Profile): Promise<Profile> {
   const next = { ...profile, updatedAt: new Date().toISOString() };
-  await withLock(FILES.profile, () => writeJson(FILES.profile, next));
+  await withLock(KEYS.profile, () => write(KEYS.profile, next));
   return next;
 }
 
 // --- Settings --------------------------------------------------------------
 
 export async function getSettings(): Promise<Settings> {
-  const s = await readJson<Settings | null>(FILES.settings, null);
+  const s = await read<Settings | null>(KEYS.settings, null);
   if (!s) return defaultSettings();
   // Merge so new fields get defaults if the stored file predates them.
   const d = defaultSettings();
@@ -119,14 +96,14 @@ export async function getSettings(): Promise<Settings> {
 
 export async function saveSettings(settings: Settings): Promise<Settings> {
   const next = { ...settings, updatedAt: new Date().toISOString() };
-  await withLock(FILES.settings, () => writeJson(FILES.settings, next));
+  await withLock(KEYS.settings, () => write(KEYS.settings, next));
   return next;
 }
 
 // --- Jobs ------------------------------------------------------------------
 
 export async function listJobs(): Promise<Job[]> {
-  return readJson<Job[]>(FILES.jobs, []);
+  return read<Job[]>(KEYS.jobs, []);
 }
 
 export async function getJob(id: string): Promise<Job | undefined> {
@@ -135,18 +112,18 @@ export async function getJob(id: string): Promise<Job | undefined> {
 }
 
 export async function upsertJob(job: Job): Promise<Job> {
-  return withLock(FILES.jobs, async () => {
+  return withLock(KEYS.jobs, async () => {
     const jobs = await listJobs();
     const idx = jobs.findIndex((j) => j.id === job.id);
     if (idx >= 0) jobs[idx] = job;
     else jobs.unshift(job);
-    await writeJson(FILES.jobs, jobs);
+    await write(KEYS.jobs, jobs);
     return job;
   });
 }
 
 export async function saveJobs(jobs: Job[]): Promise<void> {
-  await withLock(FILES.jobs, () => writeJson(FILES.jobs, jobs));
+  await withLock(KEYS.jobs, () => write(KEYS.jobs, jobs));
 }
 
 // Atomic read-modify-write over the whole jobs collection, under the file lock.
@@ -154,25 +131,25 @@ export async function saveJobs(jobs: Job[]): Promise<void> {
 export async function updateJobs(
   fn: (jobs: Job[]) => Job[] | Promise<Job[]>,
 ): Promise<Job[]> {
-  return withLock(FILES.jobs, async () => {
+  return withLock(KEYS.jobs, async () => {
     const jobs = await listJobs();
     const next = await fn(jobs);
-    await writeJson(FILES.jobs, next);
+    await write(KEYS.jobs, next);
     return next;
   });
 }
 
 export async function deleteJob(id: string): Promise<void> {
-  await withLock(FILES.jobs, async () => {
+  await withLock(KEYS.jobs, async () => {
     const jobs = (await listJobs()).filter((j) => j.id !== id);
-    await writeJson(FILES.jobs, jobs);
+    await write(KEYS.jobs, jobs);
   });
 }
 
 // --- Applications ----------------------------------------------------------
 
 export async function listApplications(): Promise<Application[]> {
-  return readJson<Application[]>(FILES.applications, []);
+  return read<Application[]>(KEYS.applications, []);
 }
 
 export async function getApplication(
@@ -192,37 +169,37 @@ export async function getApplicationByJob(
 export async function upsertApplication(
   app: Application,
 ): Promise<Application> {
-  return withLock(FILES.applications, async () => {
+  return withLock(KEYS.applications, async () => {
     const apps = await listApplications();
     const idx = apps.findIndex((a) => a.id === app.id);
     const next = { ...app, updatedAt: new Date().toISOString() };
     if (idx >= 0) apps[idx] = next;
     else apps.unshift(next);
-    await writeJson(FILES.applications, apps);
+    await write(KEYS.applications, apps);
     return next;
   });
 }
 
 export async function deleteApplication(id: string): Promise<void> {
-  await withLock(FILES.applications, async () => {
+  await withLock(KEYS.applications, async () => {
     const apps = (await listApplications()).filter((a) => a.id !== id);
-    await writeJson(FILES.applications, apps);
+    await write(KEYS.applications, apps);
   });
 }
 
 // --- Learning signals ------------------------------------------------------
 
 export async function listSignals(): Promise<PreferenceSignal[]> {
-  return readJson<PreferenceSignal[]>(FILES.signals, []);
+  return read<PreferenceSignal[]>(KEYS.signals, []);
 }
 
 export async function addSignal(
   signal: PreferenceSignal,
 ): Promise<PreferenceSignal> {
-  return withLock(FILES.signals, async () => {
+  return withLock(KEYS.signals, async () => {
     const signals = await listSignals();
     signals.unshift(signal);
-    await writeJson(FILES.signals, signals);
+    await write(KEYS.signals, signals);
     return signal;
   });
 }

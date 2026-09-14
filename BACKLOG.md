@@ -27,6 +27,13 @@ Self-directed tickets toward a production-ready app. Checked = shipped & verifie
 - [x] T14 UI polish: loading states, empty states, error toasts
 - [x] T15 Deploy readiness: health route, vercel config, env docs, LICENSE
 
+## Round 2
+- [x] T16 Pluggable storage backend + Postgres/Neon adapter (DATABASE_URL), PGlite-tested
+- [ ] T17 Cover-letter generation (grounded, opt-in) per application
+- [ ] T18 Expand tests: sources relevance filter, html strip, resume, packet
+- [ ] T19 Jobs search/filter UX
+
 ## Deferred (needs your input)
-- Hosted Postgres provisioning + Vercel deploy (needs your Vercel login)
+- Neon provisioning + Vercel deploy (needs your Vercel login) — code is ready;
+  just set DATABASE_URL + deploy
 - Real form submission (needs approach decision; safety limits apply)

@@ -71,7 +71,8 @@ With a key, the agent uses an LLM to refine messy postings and write grounded ma
 src/
   lib/
     types.ts          # domain model (Profile, Job, Application, MatchResult, ...)
-    store.ts          # file-backed JSON repository (swap for Postgres later)
+    store.ts          # collection repository (backend-agnostic)
+    db/backend.ts     # pluggable storage: JSON files or Postgres/Neon (DATABASE_URL)
     defaultProfile.ts # starter profile
     skills.ts         # skill dictionary + extractor
     parse.ts          # job-description parser (deterministic)
@@ -103,7 +104,7 @@ Companies live in `src/lib/sources/companies.ts` (and are editable at runtime on
 The app is a standard Next.js App Router project and deploys to Vercel as-is. Two things to know:
 
 - **Cron** — `vercel.json` registers a daily job that hits `/api/cron/fetch` to pull fresh postings. Set a `CRON_SECRET` env var (Vercel sends it as a bearer token) to protect the endpoint.
-- **Persistence** — the JSON store writes to the local filesystem, which is **ephemeral on Vercel** (it falls back to `/tmp` there so nothing crashes, but data won't survive between invocations). For a real deployment, reimplement the functions in `src/lib/store.ts` against a database (e.g. Neon Postgres from the Vercel Marketplace) — every caller goes through that one module, so it's a contained change.
+- **Persistence** — storage is pluggable (`src/lib/db/backend.ts`). With no `DATABASE_URL` it uses JSON files (great for local dev; ephemeral on Vercel). **Set `DATABASE_URL` to a Postgres/Neon connection string and it persists to Postgres instead** — one JSONB row per collection, created automatically. That's the switch to flip for a real deployment; provision Neon from the Vercel Marketplace and add the env var. The Postgres adapter is covered by tests (run against in-process PGlite).
 
 Health check: `GET /api/health`. AI status: `GET /api/status`.
 
