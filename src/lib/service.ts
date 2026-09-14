@@ -241,6 +241,28 @@ export function aiStatus(): { enabled: boolean; model: string | null } {
   return { enabled: aiEnabled(), model: aiEnabled() ? aiModel() : null };
 }
 
+// Prepare applications for the top recommended, eligible jobs that don't yet
+// have one. Powers the dashboard's "prepare all" action.
+export async function prepareTopMatches(
+  limit = 12,
+): Promise<{ prepared: number; skipped: number }> {
+  const ranked = await getRankedJobs();
+  const apps = await listApplications();
+  const withApp = new Set(apps.map((a) => a.jobId));
+
+  let prepared = 0;
+  let skipped = 0;
+  for (const job of ranked) {
+    if (prepared >= limit) break;
+    if (!job.match?.recommended || !job.match?.eligible || job.dismissed) continue;
+    if (withApp.has(job.id)) continue;
+    const { application } = await prepareForJob(job.id);
+    if (application) prepared++;
+    else skipped++;
+  }
+  return { prepared, skipped };
+}
+
 // --- Dashboard summary ------------------------------------------------------
 
 export interface DashboardStats {
