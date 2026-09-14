@@ -1,0 +1,108 @@
+// A dictionary of skills the parser and matcher recognize. Aliases map many
+// surface forms to one canonical skill so "JS" and "JavaScript" score the same.
+export const SKILL_ALIASES: Record<string, string> = {
+  js: "JavaScript",
+  javascript: "JavaScript",
+  ts: "TypeScript",
+  typescript: "TypeScript",
+  py: "Python",
+  python: "Python",
+  golang: "Go",
+  go: "Go",
+  "c++": "C++",
+  cpp: "C++",
+  "c#": "C#",
+  csharp: "C#",
+  java: "Java",
+  kotlin: "Kotlin",
+  swift: "Swift",
+  rust: "Rust",
+  ruby: "Ruby",
+  scala: "Scala",
+  react: "React",
+  "react.js": "React",
+  reactjs: "React",
+  "next.js": "Next.js",
+  nextjs: "Next.js",
+  vue: "Vue",
+  angular: "Angular",
+  node: "Node.js",
+  "node.js": "Node.js",
+  nodejs: "Node.js",
+  express: "Express",
+  django: "Django",
+  flask: "Flask",
+  fastapi: "FastAPI",
+  spring: "Spring",
+  sql: "SQL",
+  postgres: "PostgreSQL",
+  postgresql: "PostgreSQL",
+  mysql: "MySQL",
+  mongodb: "MongoDB",
+  redis: "Redis",
+  graphql: "GraphQL",
+  rest: "REST",
+  docker: "Docker",
+  kubernetes: "Kubernetes",
+  k8s: "Kubernetes",
+  aws: "AWS",
+  gcp: "GCP",
+  azure: "Azure",
+  terraform: "Terraform",
+  git: "Git",
+  linux: "Linux",
+  ci: "CI/CD",
+  "ci/cd": "CI/CD",
+  ml: "Machine Learning",
+  "machine learning": "Machine Learning",
+  ai: "AI",
+  "deep learning": "Deep Learning",
+  nlp: "NLP",
+  "computer vision": "Computer Vision",
+  cv: "Computer Vision",
+  pytorch: "PyTorch",
+  tensorflow: "TensorFlow",
+  keras: "Keras",
+  "scikit-learn": "scikit-learn",
+  sklearn: "scikit-learn",
+  pandas: "pandas",
+  numpy: "NumPy",
+  spark: "Spark",
+  hadoop: "Hadoop",
+  airflow: "Airflow",
+  tableau: "Tableau",
+  "power bi": "Power BI",
+  r: "R",
+  matlab: "MATLAB",
+  "data science": "Data Science",
+  "data analysis": "Data Analysis",
+  llm: "LLMs",
+  llms: "LLMs",
+  transformers: "Transformers",
+  langchain: "LangChain",
+  html: "HTML",
+  css: "CSS",
+  tailwind: "Tailwind CSS",
+};
+
+// Canonical skill list (deduped values of the alias map).
+export const CANONICAL_SKILLS = Array.from(
+  new Set(Object.values(SKILL_ALIASES)),
+);
+
+// Longest-alias-first so multi-word aliases match before their substrings.
+const SORTED_ALIASES = Object.keys(SKILL_ALIASES).sort(
+  (a, b) => b.length - a.length,
+);
+
+export function extractSkills(text: string): string[] {
+  const lower = ` ${text.toLowerCase()} `;
+  const found = new Set<string>();
+  for (const alias of SORTED_ALIASES) {
+    // word-boundary-ish match; escape regex specials in the alias
+    const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i");
+    if (re.test(lower)) found.add(SKILL_ALIASES[alias]);
+  }
+  return Array.from(found);
+}
