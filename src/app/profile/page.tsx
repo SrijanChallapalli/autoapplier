@@ -153,6 +153,19 @@ export default function ProfilePage() {
       }));
     next.projects = [...p.projects, ...addedProj];
 
+    // If there's no resume variant yet, create one from the uploaded file so
+    // resume auto-selection has something to pick.
+    if (next.resumes.length === 0 && resume.fileName) {
+      next.resumes = [
+        {
+          id: `resume_${Date.now()}`,
+          label: "My Resume",
+          fileName: resume.fileName,
+          focus: next.skills.slice(0, 8).map((s) => s.toLowerCase()),
+        },
+      ];
+    }
+
     return next;
   }
 
@@ -169,6 +182,9 @@ export default function ProfilePage() {
   }
 
   if (!p) return <p className="muted">Loading…</p>;
+
+  const isEmptyProfile =
+    !p.fullName && p.experience.length === 0 && p.skills.length === 0;
 
   return (
     <>
@@ -191,10 +207,18 @@ export default function ProfilePage() {
         </button>
       </div>
 
+      {isEmptyProfile && !reviewing && (
+        <div className="headline" style={{ fontSize: 16 }}>
+          👋 Let&apos;s build your profile. Upload your resume below and
+          we&apos;ll fill in your contact, education, experience, projects, and
+          skills — then you review and confirm. Nothing is saved until you do.
+        </div>
+      )}
+
       {/* Resume import */}
       <div className="card">
         <div className="section-label" style={{ marginTop: 0 }}>
-          Import from resume
+          {isEmptyProfile ? "Start here — import your resume" : "Import from resume"}
         </div>
         <p className="muted" style={{ marginTop: 0 }}>
           Upload a PDF or text resume and we&apos;ll read the whole thing —

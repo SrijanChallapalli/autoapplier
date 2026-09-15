@@ -1,9 +1,10 @@
 import type { Profile } from "./types";
 
-// Starter profile — every field is an empty placeholder you fill in on the
-// Profile page. Nothing here is ever treated as a real accomplishment by the
-// tailoring logic — the agent only ever rephrases what you actually enter under
-// experience/projects.
+// A blank profile. Nothing personal is pre-filled — you build your profile by
+// uploading your resume (Profile page) and setting your preferences. Only
+// functional search defaults (seniority, remote, open-to-relocate) are set, and
+// you can change those. The tailoring logic never invents content; it only ever
+// works from what you actually enter or import.
 export function defaultProfile(): Profile {
   return {
     fullName: "",
@@ -16,72 +17,32 @@ export function defaultProfile(): Profile {
 
     university: "",
     major: "",
-    degree: "B.S.",
+    degree: "",
     graduationDate: "",
     gpa: "",
 
     authorization: {
-      workAuthorization: "Authorized to work in the U.S.",
+      workAuthorization: "",
       requiresSponsorshipNow: false,
       requiresSponsorshipFuture: false,
     },
 
     preferences: {
-      roles: [
-        "Software Engineer Intern",
-        "Machine Learning Intern",
-        "Data Science Intern",
-        "AI Engineer Intern",
-      ],
-      interests: ["AI/ML", "software engineering", "data science", "backend"],
+      roles: [],
+      interests: [],
       locations: ["Remote"],
-      countries: ["United States"],
+      countries: [],
       willingToRelocate: true,
-      excludeKeywords: [
-        "active security clearance",
-        "10+ years",
-        "principal",
-        "staff engineer",
-        "director",
-      ],
+      excludeKeywords: [],
       seniority: "internship",
     },
 
-    skills: [
-      "Python",
-      "JavaScript",
-      "TypeScript",
-      "React",
-      "Node.js",
-      "SQL",
-      "Git",
-    ],
-
+    skills: [],
     experience: [],
     projects: [],
+    resumes: [],
 
-    resumes: [
-      {
-        id: "resume_general",
-        label: "General SWE",
-        fileName: "Resume_SWE.pdf",
-        focus: ["software engineering", "full stack", "python", "react"],
-        notes: "Default resume for general software engineering roles.",
-      },
-      {
-        id: "resume_aiml",
-        label: "AI / ML",
-        fileName: "Resume_ML.pdf",
-        focus: ["machine learning", "ai", "pytorch", "data science", "nlp"],
-        notes: "Emphasizes ML coursework and projects.",
-      },
-    ],
-
-    savedAnswers: {
-      "authorized to work": "Yes",
-      "require sponsorship": "No",
-      "willing to relocate": "Yes",
-    },
+    savedAnswers: {},
 
     updatedAt: new Date().toISOString(),
   };
