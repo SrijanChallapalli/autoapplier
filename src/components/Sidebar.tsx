@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const LINKS = [
-  { href: "/", label: "Dashboard", icon: "◎" },
+  { href: "/dashboard", label: "Dashboard", icon: "◎" },
   { href: "/jobs", label: "Jobs", icon: "≡" },
   { href: "/applications", label: "Applications", icon: "✓" },
   { href: "/profile", label: "Profile", icon: "◑" },
@@ -42,14 +42,16 @@ export function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <div className="brand">
+      <Link href="/dashboard" className="brand">
         <span className="brand-mark">A</span>
         AutoApplier
-      </div>
+      </Link>
       <nav className="nav">
         {LINKS.map((l) => {
           const active =
-            l.href === "/" ? path === "/" : path.startsWith(l.href);
+            l.href === "/dashboard"
+              ? path === "/dashboard"
+              : path.startsWith(l.href);
           return (
             <Link
               key={l.href}
