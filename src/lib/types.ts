@@ -39,6 +39,10 @@ export interface Preferences {
   roles: string[]; // e.g. ["Software Engineer Intern", "ML Intern"]
   interests: string[]; // e.g. ["AI/ML", "distributed systems", "data"]
   locations: string[]; // preferred locations, "Remote" allowed
+  // Restrict findings to these countries (canonical names, e.g. "United
+  // States"). Empty => anywhere. A location whose country is unknown (bare
+  // "Remote") is not excluded.
+  countries: string[];
   willingToRelocate: boolean;
   minSalary?: number; // annual, USD; optional
   excludeKeywords: string[]; // hard filters, e.g. ["clearance", "senior", "10+ years"]

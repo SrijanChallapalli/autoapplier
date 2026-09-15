@@ -38,6 +38,8 @@ Self-directed tickets toward a production-ready app. Checked = shipped & verifie
 - [x] T21 Per-internship resume tailoring (grounded, never invents), editable + export
 - [x] T22 Networking: LinkedIn/Google search links (recruiters, team, alumni) + outreach draft
 - [x] T23 Full-resume parse (no AI needed) → review-and-confirm panel before saving
+- [x] T24 Robust experience/project parsing (multi-line headers, comma/pipe formats)
+- [x] T25 Target-countries restriction — filters live fetch + blocks out-of-country in matching
 
 ## Deferred (needs your input)
 - Neon provisioning + Vercel deploy (needs your Vercel login) — code is ready;

@@ -52,7 +52,7 @@ describe("parseResumeStructured", () => {
     const first = p.experience![0];
     expect(first.title).toMatch(/Software Engineering Intern/);
     expect(first.company).toMatch(/Acme Corp/);
-    expect(first.bullets.length).toBeGreaterThanOrEqual(2);
+    expect(first.bullets?.length ?? 0).toBeGreaterThanOrEqual(2);
     expect(first.endDate).toBeTruthy();
   });
 

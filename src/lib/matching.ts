@@ -7,6 +7,7 @@ import type {
   ResumeVariant,
 } from "./types";
 import { extractSkills } from "./skills";
+import { countryAllowed, detectCountry } from "./geo";
 
 // ---------------------------------------------------------------------------
 // The matcher scores a job against the profile. It is deterministic and
@@ -138,6 +139,18 @@ export function matchJob(job: Job, ctx: MatchContext): MatchResult {
     if (kw && descLower.includes(kw.toLowerCase())) {
       blockers.push(`Matches an excluded keyword: "${kw}"`);
     }
+  }
+  // Country restriction — only blocks when the job's country is determinable
+  // and not in the allowed list (bare "Remote" is never excluded).
+  const allowedCountries = profile.preferences.countries ?? [];
+  if (
+    allowedCountries.length &&
+    job.location &&
+    !countryAllowed(job.location, allowedCountries)
+  ) {
+    blockers.push(
+      `Outside your target countries (${detectCountry(job.location) ?? job.location})`,
+    );
   }
 
   // --- Skill overlap -------------------------------------------------------
