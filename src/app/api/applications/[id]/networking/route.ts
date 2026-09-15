@@ -3,6 +3,7 @@ import {
   networkingForApplication,
   outreachForApplication,
 } from "@/lib/service";
+import { withAiCredentials } from "@/lib/aiContext";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,11 +24,11 @@ export async function GET(
 
 // POST -> AI-drafted outreach note (requires an AI key).
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const result = await outreachForApplication(id);
+  const result = await withAiCredentials(req, () => outreachForApplication(id));
   if (result.error) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

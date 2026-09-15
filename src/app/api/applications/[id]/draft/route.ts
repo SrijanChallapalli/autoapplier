@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { draftAnswerForApplication } from "@/lib/service";
+import { withAiCredentials } from "@/lib/aiContext";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +17,9 @@ export async function POST(
   if (!question) {
     return NextResponse.json({ error: "question is required" }, { status: 400 });
   }
-  const result = await draftAnswerForApplication(id, question);
+  const result = await withAiCredentials(req, () =>
+    draftAnswerForApplication(id, question),
+  );
   if (result.error) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

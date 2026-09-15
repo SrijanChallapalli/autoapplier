@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { importAndMatch } from "@/lib/service";
+import { withAiCredentials } from "@/lib/aiContext";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,6 +9,10 @@ export const dynamic = "force-dynamic";
 // Accepts one posting or, if `text` contains multiple separated by a line of
 // three or more dashes, splits them into several jobs.
 export async function POST(req: Request) {
+  return withAiCredentials(req, () => handleImport(req));
+}
+
+async function handleImport(req: Request) {
   const body = await req.json();
   const text: string = (body.text ?? "").toString();
   const url: string | undefined = body.url?.toString().trim() || undefined;
