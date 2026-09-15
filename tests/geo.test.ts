@@ -13,6 +13,15 @@ describe("detectCountry", () => {
     expect(detectCountry("Toronto, Canada")).toBe("Canada");
     expect(detectCountry("Dublin, Ireland")).toBe("Ireland");
   });
+  it("detects native-language names and more countries", () => {
+    expect(detectCountry("Berlin, Deutschland")).toBe("Germany");
+    expect(detectCountry("Amsterdam, The Netherlands")).toBe("Netherlands");
+    expect(detectCountry("Madrid, España")).toBe("Spain");
+    expect(detectCountry("Luxembourg City, Luxembourg")).toBe("Luxembourg");
+  });
+  it("still resolves US state cities near new aliases (no false Australia)", () => {
+    expect(detectCountry("Austin, TX (Hybrid)")).toBe("United States");
+  });
   it("returns undefined for bare remote or unknown", () => {
     expect(detectCountry("Remote")).toBeUndefined();
     expect(detectCountry(undefined)).toBeUndefined();
