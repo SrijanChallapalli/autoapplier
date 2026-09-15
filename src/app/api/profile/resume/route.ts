@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { extractResumeText, parseResume } from "@/lib/resume";
+import {
+  extractResumeText,
+  parseResume,
+  parseResumeStructured,
+  mergeExtracted,
+} from "@/lib/resume";
 import { aiEnabled, aiExtractProfile } from "@/lib/ai";
 
 export const runtime = "nodejs";
@@ -39,9 +44,12 @@ export async function POST(req: Request) {
         { status: 422 },
       );
     }
-    // Deterministic contact fields always available; rich structured fields
-    // (experience/education/projects) come from the LLM when a key is present.
-    const extracted = aiEnabled() ? await aiExtractProfile(parsed.text) : null;
+    // Always parse the whole resume deterministically; when an AI key is set,
+    // prefer the LLM's structured result but backfill from the deterministic
+    // parse so nothing is lost.
+    const deterministic = parseResumeStructured(parsed.text);
+    const ai = aiEnabled() ? await aiExtractProfile(parsed.text) : null;
+    const extracted = ai ? mergeExtracted(ai, deterministic) : deterministic;
 
     return NextResponse.json({
       fileName: file.name,
@@ -54,8 +62,8 @@ export async function POST(req: Request) {
       portfolio: parsed.portfolio,
       chars: parsed.chars,
       preview: parsed.text.slice(0, 1500),
-      extracted, // full structured profile (LLM), or null
-      aiUsed: Boolean(extracted),
+      extracted, // full structured profile (always present)
+      aiUsed: Boolean(ai),
     });
   } catch {
     return NextResponse.json(
