@@ -63,4 +63,16 @@ describe("analyzeFlags", () => {
     expect(report.atsScore).toBeGreaterThanOrEqual(0);
     expect(report.atsScore).toBeLessThanOrEqual(100);
   });
+
+  it("does not suggest echoing a placeholder job title", () => {
+    const real = prep("Software Engineer Intern. Python.");
+    expect(real.report.atsSuggestions.join(" ")).toMatch(/echo the exact job title/i);
+
+    const placeholder = prep("Software Engineer Intern. Python.", {
+      title: "Untitled role",
+    });
+    expect(placeholder.report.atsSuggestions.join(" ")).not.toMatch(
+      /echo the exact job title/i,
+    );
+  });
 });
