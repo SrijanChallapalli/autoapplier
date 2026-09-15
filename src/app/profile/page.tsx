@@ -704,10 +704,19 @@ function ResumeReview({
             Projects to add ({ex.projects!.length})
           </div>
           {ex.projects!.map((pr, i) => (
-            <div key={i} style={{ marginBottom: 6 }}>
-              <span style={{ fontWeight: 600 }}>{pr.name || "Project"}</span>
+            <div key={i} style={{ marginBottom: 8 }}>
+              <div style={{ fontWeight: 600 }}>{pr.name || "Project"}</div>
               {pr.description && (
-                <span className="muted"> — {pr.description}</span>
+                <div className="muted" style={{ fontSize: 13 }}>
+                  {pr.description}
+                </div>
+              )}
+              {pr.bullets && pr.bullets.length > 0 && (
+                <ul className="clean" style={{ fontSize: 13 }}>
+                  {pr.bullets.slice(0, 4).map((b, j) => (
+                    <li key={j}>{b}</li>
+                  ))}
+                </ul>
               )}
             </div>
           ))}
