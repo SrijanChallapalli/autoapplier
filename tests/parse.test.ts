@@ -76,6 +76,15 @@ describe("parseJob", () => {
     expect(job.sponsorshipOffered).toBe(true);
   });
 
+  it("detects salary across currencies, ranges, and 'up to' phrasing", () => {
+    expect(parseJob({ text: "Compensation: $90,000–$120,000/yr" }).salaryText).toContain(
+      "90,000",
+    );
+    expect(parseJob({ text: "Pay is up to $120k per year." }).salaryText).toMatch(/120k/i);
+    expect(parseJob({ text: "Base salary USD 100k - 130k." }).salaryText).toMatch(/100k/i);
+    expect(parseJob({ text: "Salary £45,000 per year." }).salaryText).toContain("£45,000");
+  });
+
   it("only counts years tied to experience, not incidental year counts", () => {
     // "within 4 years of graduation" and "4-year degree" are not experience
     // requirements and must not become a blocker.

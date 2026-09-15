@@ -86,7 +86,6 @@ export const SKILL_ALIASES: Record<string, string> = {
   // Data / infra / MLOps commonly listed on early-career postings.
   kafka: "Kafka",
   "apache kafka": "Kafka",
-  spark: "Spark",
   flink: "Flink",
   jenkins: "Jenkins",
   "github actions": "GitHub Actions",
