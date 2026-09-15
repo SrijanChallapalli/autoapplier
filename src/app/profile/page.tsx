@@ -380,6 +380,11 @@ export default function ProfilePage() {
           on={(v) => set("preferences", { ...p.preferences, locations: v })}
         />
         <ListField
+          label="Target countries — only show jobs here (blank = anywhere)"
+          v={p.preferences.countries ?? []}
+          on={(v) => set("preferences", { ...p.preferences, countries: v })}
+        />
+        <ListField
           label="Exclude keywords (hard filters)"
           v={p.preferences.excludeKeywords}
           on={(v) =>

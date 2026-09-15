@@ -33,6 +33,7 @@ import {
   aiModel,
 } from "./ai";
 import { buildNetworkingLinks, type NetworkLink } from "./networking";
+import { countryAllowed } from "./geo";
 import { extractSkills } from "./skills";
 import {
   fetchLivePostings,
@@ -125,6 +126,7 @@ export async function ingestLiveJobs(
 
   let added = 0;
   let skippedDuplicates = 0;
+  const allowedCountries = profile.preferences.countries ?? [];
 
   // Dedup + write under the jobs lock so a concurrent fetch can't lose rows.
   await updateJobs((existing) => {
@@ -136,6 +138,8 @@ export async function ingestLiveJobs(
     );
     const newJobs = [];
     for (const p of postings) {
+      // Skip roles outside the user's target countries.
+      if (!countryAllowed(p.location, allowedCountries)) continue;
       const key = `${p.company}::${p.title}`.toLowerCase();
       if ((p.url && seenUrls.has(p.url)) || seenKeys.has(key)) {
         skippedDuplicates++;

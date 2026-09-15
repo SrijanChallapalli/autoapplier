@@ -35,6 +35,7 @@ export function defaultProfile(): Profile {
       ],
       interests: ["AI/ML", "software engineering", "data science", "backend"],
       locations: ["Remote"],
+      countries: ["United States"],
       willingToRelocate: true,
       excludeKeywords: [
         "active security clearance",
