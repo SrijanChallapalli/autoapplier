@@ -155,8 +155,14 @@ export function analyzeFlags(
       `Include these exact keywords from the posting where they truthfully apply: ${missingKeywords.slice(0, 10).join(", ")}.`,
     );
   }
+  // Only suggest echoing the title when we actually parsed a real one.
+  const hasRealTitle = job.title && !/^(untitled role|unknown)/i.test(job.title);
+  if (hasRealTitle) {
+    atsSuggestions.push(
+      `Echo the exact job title ("${job.title}") in your summary or a headline so title-matching ATS filters catch it.`,
+    );
+  }
   atsSuggestions.push(
-    `Echo the exact job title ("${job.title}") in your summary or a headline so title-matching ATS filters catch it.`,
     "Use a single-column, text-based layout — parsers drop content in tables, columns, headers/footers, and images.",
     "Use standard section headings (Experience, Education, Skills, Projects) so the parser maps your content correctly.",
     "Mirror the posting's phrasing (e.g. their 'REST APIs' vs your 'RESTful services') so keyword matches register.",

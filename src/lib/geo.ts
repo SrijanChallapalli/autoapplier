@@ -19,7 +19,9 @@ const COUNTRIES = [
   "Hong Kong","Taiwan","Israel","Brazil","Mexico","Argentina","Chile",
   "Colombia","South Africa","Nigeria","Kenya","Egypt","Turkey","Ukraine",
   "Romania","Czechia","Greece","Philippines","Indonesia","Vietnam","Thailand",
-  "Malaysia",
+  "Malaysia","Luxembourg","Estonia","Lithuania","Latvia","Hungary","Bulgaria",
+  "Croatia","Slovakia","Slovenia","Iceland","Saudi Arabia","Qatar","Pakistan",
+  "Bangladesh","Peru",
 ].sort((a, b) => b.length - a.length);
 
 // Aliases mapped to canonical names.
@@ -31,6 +33,13 @@ const ALIASES: Record<string, string> = {
   scotland: "United Kingdom", wales: "United Kingdom", britain: "United Kingdom",
   "great britain": "United Kingdom", uae: "United Arab Emirates",
   korea: "South Korea", roi: "Ireland",
+  // Native-language and common spellings.
+  deutschland: "Germany", nederland: "Netherlands",
+  "the netherlands": "Netherlands", holland: "Netherlands",
+  españa: "Spain", espana: "Spain", brasil: "Brazil", méxico: "Mexico",
+  mexico: "Mexico", suisse: "Switzerland", schweiz: "Switzerland",
+  österreich: "Austria", osterreich: "Austria", polska: "Poland",
+  sg: "Singapore", nz: "New Zealand", aus: "Australia", ksa: "Saudi Arabia",
 };
 
 export function detectCountry(location?: string): string | undefined {

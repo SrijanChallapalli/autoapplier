@@ -1,16 +1,52 @@
 import type { Job, Profile } from "./types";
+import { getAiCredentials } from "./aiContext";
 
 // ---------------------------------------------------------------------------
-// Optional LLM assistance via the Vercel AI Gateway (OpenAI-compatible API).
-// Everything here is best-effort: if AI_GATEWAY_API_KEY is unset or the call
-// fails, callers fall back to the deterministic engine. The LLM is only used to
+// Optional LLM assistance via any OpenAI-compatible chat API.
+// Everything here is best-effort: if AI isn't configured or the call fails,
+// callers fall back to the deterministic engine. The LLM is only used to
 // *rephrase and refine* — never to invent experience.
+//
+// Endpoint (server-controlled, via env — never a client header, to avoid SSRF):
+//   AI_BASE_URL  the OpenAI-compatible base, e.g. http://localhost:11434/v1 for
+//                a local Ollama server. Defaults to the Vercel AI Gateway.
+//   AI_MODEL     the model name the endpoint expects (e.g. "llama3.1").
+//
+// Auth: a local endpoint usually needs no key. When talking to the gateway (or
+// any endpoint that needs auth) the key resolves per request first
+// (bring-your-own-key, see aiContext.ts), then from AI_GATEWAY_API_KEY.
 // ---------------------------------------------------------------------------
 
-const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
+const DEFAULT_BASE_URL = "https://ai-gateway.vercel.sh/v1";
+const DEFAULT_MODEL = "anthropic/claude-sonnet-5";
+
+// True when a custom endpoint (e.g. a local model server) is configured. Such
+// endpoints typically need no API key, so their presence alone enables AI.
+function usingCustomEndpoint(): boolean {
+  return Boolean(process.env.AI_BASE_URL);
+}
+
+// The OpenAI-compatible base URL, without a trailing slash.
+export function aiEndpoint(): string {
+  return (process.env.AI_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, "");
+}
+
+function completionsUrl(): string {
+  return `${aiEndpoint()}/chat/completions`;
+}
+
+// The active API key: the caller's own key (BYOK) or the server env var.
+function resolveKey(): string | undefined {
+  return getAiCredentials().apiKey || process.env.AI_GATEWAY_API_KEY || undefined;
+}
 
 export function aiEnabled(): boolean {
-  return Boolean(process.env.AI_GATEWAY_API_KEY);
+  return Boolean(resolveKey()) || usingCustomEndpoint();
+}
+
+// Whether AI is running against a local / custom endpoint rather than the gateway.
+export function aiIsLocal(): boolean {
+  return usingCustomEndpoint();
 }
 
 export interface ChatMessage {
@@ -24,16 +60,16 @@ export async function aiChatMessages(
   messages: ChatMessage[],
   opts: { json?: boolean; temperature?: number } = {},
 ): Promise<string | null> {
-  const key = process.env.AI_GATEWAY_API_KEY;
-  if (!key) return null;
-  const model = process.env.AI_MODEL || "anthropic/claude-sonnet-5";
+  const key = resolveKey();
+  // A local/custom endpoint may not need a key; the gateway does.
+  if (!key && !usingCustomEndpoint()) return null;
+  const model = aiModel();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (key) headers.Authorization = `Bearer ${key}`;
   try {
-    const res = await fetch(GATEWAY_URL, {
+    const res = await fetch(completionsUrl(), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-      },
+      headers,
       body: JSON.stringify({
         model,
         messages,
@@ -89,7 +125,7 @@ export async function aiRefineJob(
 }
 
 export function aiModel(): string {
-  return process.env.AI_MODEL || "anthropic/claude-sonnet-5";
+  return getAiCredentials().model || process.env.AI_MODEL || DEFAULT_MODEL;
 }
 
 // A short, grounded LinkedIn outreach note to a recruiter/employee at a company.
@@ -236,13 +272,24 @@ export async function aiTailorResume(
   };
   return chat(
     [
-      "You tailor a resume to a specific role. Output clean Markdown.",
+      "You tailor a resume to a specific role. Output clean Markdown ONLY.",
       "HARD RULES — do not break these:",
       "- Use ONLY the candidate facts provided. Never add employers, titles, dates, skills, metrics, or bullets that aren't there.",
       "- You MAY: reorder sections/bullets, choose which experiences/projects to feature, and rephrase existing bullets to surface keywords the role emphasizes.",
       "- Keep every claim truthful to the source. If a required skill is missing, do NOT claim it.",
-      "Structure: name + contact line, short summary (grounded), Skills, Experience, Projects, Education.",
-      "Keep it to roughly one page. Output only the resume Markdown.",
+      "",
+      "FORMAT — follow this ATS-safe structure EXACTLY (used to render a PDF):",
+      "- Line 1: '# Full Name'",
+      "- Line 2: contact items separated by ' | ' (email | phone | linkedin.com/in/... | github.com/...). Plain text, no icons, no labels.",
+      "- Then these sections in order, each as '## Heading' with EXACT names: Education, Experience, Projects, Technical Skills. (Add '## Summary' first only if genuinely useful.)",
+      "- Each entry has EXACTLY ONE '### ' line (the header). The line directly under it is a PLAIN line (NO '###') for company/degree. Never split an entry across multiple '###' lines.",
+      "    Experience: '### Job Title | Mon YYYY – Mon YYYY' then a plain line 'Company | City, State'",
+      "    Education:  '### University | City, State' then a plain line 'Degree, Major | Mon YYYY – Mon YYYY'",
+      "    Projects:   '### Project Name | Tech, Stack' (dates optional), then bullets",
+      "- Bullets start with '- ', one accomplishment each, strong verb first, quantified only with real numbers.",
+      "- Dates as 'Mon YYYY – Mon YYYY' (or '– Present'). Use ' | ' to separate the left/right parts. No tables, no columns, no icons, no emojis.",
+      "- Technical Skills: 'Label: comma, separated, values' lines (e.g. 'Languages: Python, TypeScript').",
+      "Keep it to one page. Output ONLY the resume Markdown, nothing else.",
     ].join("\n"),
     `Target role: ${job.title} at ${job.company}\n\nRole description:\n${(
       job.description ?? ""
