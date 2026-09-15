@@ -16,6 +16,15 @@ describe("extractSkills", () => {
     const s = extractSkills("A trustworthy candidate.");
     expect(s).not.toContain("Rust");
   });
+
+  it("recognizes common data/infra/ML tooling", () => {
+    const s = extractSkills(
+      "Built pipelines with Kafka, Snowflake, and dbt; deployed via GitHub Actions and .NET services.",
+    );
+    expect(s).toEqual(
+      expect.arrayContaining(["Kafka", "Snowflake", "dbt", "GitHub Actions", ".NET"]),
+    );
+  });
 });
 
 describe("parseJob", () => {
