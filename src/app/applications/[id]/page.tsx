@@ -10,6 +10,8 @@ import type {
 import { StatusBadge, ConfidenceBadge, fmtDate } from "@/components/ui";
 import { buildPacket } from "@/lib/packet";
 import type { NetworkLink } from "@/lib/networking";
+import { FlagsPanel } from "@/components/FlagsPanel";
+import { ResumeChat } from "@/components/ResumeChat";
 
 const STATUS_OPTIONS: ApplicationStatus[] = [
   "draft",
@@ -420,7 +422,10 @@ export default function ApplicationDetailPage({
         />
       </div>
 
-      {/* --- Tailored resume --- */}
+      {/* --- Flags & ATS --- */}
+      <FlagsPanel appId={app.id} refreshKey={app.tailoredResume ?? ""} />
+
+      {/* --- Resume editor (tailored resume + chat) --- */}
       <div className="card">
         <div
           style={{
@@ -430,7 +435,7 @@ export default function ApplicationDetailPage({
           }}
         >
           <div className="section-label" style={{ marginTop: 0 }}>
-            Tailored resume ({app.resumeLabel ?? "no base resume"})
+            Resume editor ({app.resumeLabel ?? "no base resume"})
           </div>
           <button
             className="btn btn-sm"
@@ -445,8 +450,9 @@ export default function ApplicationDetailPage({
           </button>
         </div>
         <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-          Reorders and rephrases your <em>real</em> experience to match this job
-          — never adds anything you didn&apos;t do. Edit freely.
+          Tailor and edit your resume for this role, then chat below to improve
+          it. It only ever works from your <em>real</em> experience — never
+          invents.
         </p>
         <textarea
           value={app.tailoredResume ?? ""}
@@ -454,8 +460,17 @@ export default function ApplicationDetailPage({
             setApp((a) => (a ? { ...a, tailoredResume: e.target.value } : a))
           }
           onBlur={(e) => patch({ tailoredResume: e.target.value })}
-          placeholder="Generate a tailored resume draft for this specific internship…"
+          placeholder="Generate a tailored resume draft, or chat below to build one…"
           style={{ minHeight: 180, fontFamily: "ui-monospace, monospace", fontSize: 13 }}
+        />
+
+        <div className="section-label">Chat to improve it</div>
+        <ResumeChat
+          appId={app.id}
+          onApplyResume={(text) => {
+            setApp((a) => (a ? { ...a, tailoredResume: text } : a));
+            patch({ tailoredResume: text }, "Applied to your tailored resume");
+          }}
         />
       </div>
 

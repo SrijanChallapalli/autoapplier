@@ -29,11 +29,14 @@ import {
   aiCoverLetter,
   aiTailorResume,
   aiOutreachMessage,
+  aiChatMessages,
   aiEnabled,
   aiModel,
+  type ChatMessage,
 } from "./ai";
 import { buildNetworkingLinks, type NetworkLink } from "./networking";
 import { countryAllowed } from "./geo";
+import { analyzeFlags, type FlagReport } from "./flags";
 import { extractSkills } from "./skills";
 import {
   fetchLivePostings,
@@ -330,6 +333,72 @@ export async function outreachForApplication(
   const message = await aiOutreachMessage(app.company, app.title, profile);
   if (!message) return { error: "The outreach request failed — try again." };
   return { message };
+}
+
+// Green/yellow/red flags + ATS suggestions for a prepared application.
+export async function flagsForApplication(
+  applicationId: string,
+): Promise<{ report?: FlagReport; error?: string }> {
+  const app = await getApplication(applicationId);
+  if (!app) return { error: "Application not found" };
+  const job = await getJob(app.jobId);
+  if (!job) return { error: "Job not found" };
+  const profile = await getProfile();
+  return { report: analyzeFlags(job, profile, app) };
+}
+
+// Interactive resume-editor chat for a specific role. Grounded in the profile;
+// never invents. When asked for a rewrite, the model returns the full resume in
+// a ```resume fenced block that the UI can apply to the tailored resume.
+export async function resumeChatForApplication(
+  applicationId: string,
+  messages: ChatMessage[],
+): Promise<{ reply?: string; error?: string }> {
+  if (!aiEnabled()) {
+    return {
+      error:
+        "The resume editor chat needs an AI Gateway key (AI_GATEWAY_API_KEY). Add one to enable it.",
+    };
+  }
+  const app = await getApplication(applicationId);
+  if (!app) return { error: "Application not found" };
+  const job = await getJob(app.jobId);
+  const profile = await getProfile();
+
+  const facts = {
+    name: profile.fullName,
+    education: {
+      university: profile.university,
+      major: profile.major,
+      graduation: profile.graduationDate,
+    },
+    skills: profile.skills,
+    experience: profile.experience,
+    projects: profile.projects,
+  };
+  const system = [
+    "You are a resume coach helping a student tailor their resume to a specific role and pass ATS screens.",
+    "Rules:",
+    "- Use ONLY the candidate's real facts (below). NEVER invent employers, roles, skills, dates, metrics, or bullets.",
+    "- Give specific, actionable edits: stronger action verbs, quantified impact (only using real numbers they gave), keyword alignment to the job, ordering, and ATS formatting.",
+    "- Be concise and direct. When the user asks you to rewrite the resume (or a section), output the full updated resume in a fenced ```resume code block so it can be applied; keep prose commentary short and outside the block.",
+    "",
+    `TARGET ROLE: ${job?.title ?? app.title} at ${job?.company ?? app.company}`,
+    "",
+    `JOB DESCRIPTION:\n${(job?.description ?? "").slice(0, 2500)}`,
+    "",
+    `CANDIDATE FACTS (JSON):\n${JSON.stringify(facts, null, 2)}`,
+    app.tailoredResume
+      ? `\nCURRENT TAILORED RESUME:\n${app.tailoredResume}`
+      : "",
+  ].join("\n");
+
+  const reply = await aiChatMessages(
+    [{ role: "system", content: system }, ...messages],
+    { temperature: 0.3 },
+  );
+  if (!reply) return { error: "The chat request failed — try again." };
+  return { reply };
 }
 
 export function aiStatus(): { enabled: boolean; model: string | null } {

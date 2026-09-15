@@ -13,10 +13,16 @@ export function aiEnabled(): boolean {
   return Boolean(process.env.AI_GATEWAY_API_KEY);
 }
 
-async function chat(
-  system: string,
-  user: string,
-  opts: { json?: boolean } = {},
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+// Low-level chat with an arbitrary message list. Returns null if AI is off or
+// the call fails.
+export async function aiChatMessages(
+  messages: ChatMessage[],
+  opts: { json?: boolean; temperature?: number } = {},
 ): Promise<string | null> {
   const key = process.env.AI_GATEWAY_API_KEY;
   if (!key) return null;
@@ -30,17 +36,11 @@ async function chat(
       },
       body: JSON.stringify({
         model,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-        temperature: 0.2,
-        ...(opts.json
-          ? { response_format: { type: "json_object" } }
-          : {}),
+        messages,
+        temperature: opts.temperature ?? 0.2,
+        ...(opts.json ? { response_format: { type: "json_object" } } : {}),
       }),
-      // Don't hang the request path forever.
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(40_000),
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -48,6 +48,20 @@ async function chat(
   } catch {
     return null;
   }
+}
+
+async function chat(
+  system: string,
+  user: string,
+  opts: { json?: boolean } = {},
+): Promise<string | null> {
+  return aiChatMessages(
+    [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    opts,
+  );
 }
 
 // Refine loosely-parsed company/title/location and produce a 1-line role summary.
