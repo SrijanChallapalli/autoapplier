@@ -63,6 +63,32 @@ describe("parseResumeStructured", () => {
   });
 });
 
+describe("parseResumeStructured — no blank lines (PDF-like)", () => {
+  // PDF text extraction often drops the blank lines between entries.
+  const packed = `Sam Rivera
+sam@example.com
+EXPERIENCE
+Software Engineer Intern at Acme Corp   Jun 2024 - Aug 2024
+- Built React features
+- Wrote REST APIs
+Data Analyst at Insight Labs   2023 - 2024
+- Built dashboards in SQL
+PROJECTS
+TradeBot https://github.com/sam/tradebot
+- Trading simulator in TypeScript`;
+
+  it("still splits multiple experiences without blank separators", () => {
+    const p = parseResumeStructured(packed);
+    expect(p.experience?.length).toBe(2);
+    expect(p.experience![0].title).toMatch(/Software Engineer Intern/);
+    expect(p.experience![0].company).toMatch(/Acme Corp/);
+    expect(p.experience![1].title).toMatch(/Data Analyst/);
+    expect(p.experience![1].company).toMatch(/Insight Labs/);
+    expect(p.projects?.length).toBe(1);
+    expect(p.projects![0].name).toMatch(/TradeBot/);
+  });
+});
+
 describe("mergeExtracted", () => {
   it("prefers primary but backfills from secondary", () => {
     const merged = mergeExtracted(
