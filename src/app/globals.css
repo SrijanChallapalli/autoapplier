@@ -456,6 +456,190 @@ ul.clean li {
   font-size: 14px;
 }
 
+/* --- Resume editor --- */
+.resume-editor {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+.resume-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+/* Segmented Edit / Split / Preview control */
+.seg {
+  display: inline-flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+}
+.seg-btn {
+  border: none;
+  background: none;
+  padding: 5px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  color: var(--text-muted);
+}
+.seg-btn:hover {
+  background: var(--surface-2);
+}
+.seg-btn.active {
+  background: var(--primary);
+  color: #fff;
+}
+.fmt-tools {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.fmt-btn {
+  padding: 5px 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+}
+.fmt-btn:hover {
+  color: var(--text);
+}
+.dl-tools {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.resume-body {
+  display: flex;
+  gap: 0;
+  min-height: 460px;
+}
+.resume-body > * {
+  flex: 1;
+  min-width: 0;
+}
+.resume-body.mode-split .resume-input {
+  border-right: 1px solid var(--border);
+}
+.resume-input {
+  border: none;
+  border-radius: 0;
+  resize: none;
+  padding: 18px 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  background: var(--surface);
+}
+.resume-input:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--primary-soft);
+}
+.resume-preview-wrap {
+  background: var(--surface-2);
+  padding: 20px;
+  overflow: auto;
+  max-height: 720px;
+}
+
+/* The rendered resume "page" — always looks like white paper, both themes. */
+.resume-page {
+  background: #ffffff;
+  color: #111827;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px 44px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12), 0 6px 20px rgba(16, 24, 40, 0.1);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.resume-page h1 {
+  font-size: 26px;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 3px;
+  letter-spacing: 0.01em;
+  color: #111827;
+}
+.resume-page h1 + p {
+  text-align: center;
+  color: #4b5563;
+  font-size: 12.5px;
+  margin: 0 0 14px;
+}
+.resume-page h2 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #111827;
+  border-bottom: 1px solid #9ca3af;
+  padding-bottom: 3px;
+  margin: 18px 0 8px;
+}
+.resume-page h3 {
+  font-size: 14.5px;
+  font-weight: 700;
+  margin: 11px 0 2px;
+  color: #111827;
+}
+.resume-page h4 {
+  font-size: 13.5px;
+  font-weight: 600;
+  margin: 8px 0 2px;
+  color: #1f2937;
+}
+.resume-page p {
+  margin: 0 0 7px;
+}
+.resume-page ul {
+  margin: 4px 0 10px;
+  padding-left: 20px;
+}
+.resume-page li {
+  margin: 0 0 4px;
+}
+.resume-page a {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+.resume-page hr {
+  border: none;
+  border-top: 1px solid #d1d5db;
+  margin: 12px 0;
+}
+.resume-page strong {
+  font-weight: 700;
+}
+.resume-empty {
+  min-height: 200px;
+}
+
+@media (max-width: 860px) {
+  .resume-body.mode-split {
+    flex-direction: column;
+  }
+  .resume-body.mode-split .resume-input {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .dl-tools {
+    margin-left: 0;
+  }
+}
+
 @media (max-width: 760px) {
   .app {
     flex-direction: column;
