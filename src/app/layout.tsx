@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Sidebar } from "@/components/Sidebar";
+import { AppShell } from "@/components/AppShell";
+import { AiKeyBridge } from "@/components/AiKeyBridge";
 
 export const metadata: Metadata = {
   title: "AutoApplier — your job-search assistant",
@@ -16,10 +17,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="app">
-          <Sidebar />
-          <main className="main">{children}</main>
-        </div>
+        <AiKeyBridge />
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

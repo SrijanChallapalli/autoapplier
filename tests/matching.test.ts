@@ -78,4 +78,14 @@ describe("rankJobs", () => {
     const ranked = rankJobs([weak, strong]);
     expect(ranked[0].id).toBe(strong.id);
   });
+
+  it("breaks score ties by putting the newer posting first", () => {
+    const older = make("Software Engineer Intern. Remote. Python, React.");
+    const newer = make("Software Engineer Intern. Remote. Python, React.");
+    older.createdAt = "2026-01-01T00:00:00.000Z";
+    newer.createdAt = "2026-06-01T00:00:00.000Z";
+    expect(older.match!.score).toBe(newer.match!.score); // identical inputs
+    const ranked = rankJobs([older, newer]);
+    expect(ranked[0].id).toBe(newer.id);
+  });
 });

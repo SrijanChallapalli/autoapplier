@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Application, ApplicationStatus } from "@/lib/types";
 import { StatusBadge, ConfidenceBadge, fmtDate } from "@/components/ui";
+import { relativeDay } from "@/lib/format";
 
 const GROUPS: { key: string; label: string; statuses: ApplicationStatus[] }[] = [
   {
@@ -78,7 +79,9 @@ export default function ApplicationsPage() {
                     ? ` · Applied ${fmtDate(a.dateApplied)}`
                     : ""}
                   {a.followUpDate
-                    ? ` · Follow up ${fmtDate(a.followUpDate)}`
+                    ? ` · Follow up ${fmtDate(a.followUpDate)} (${relativeDay(
+                        a.followUpDate,
+                      )})`
                     : ""}
                 </div>
                 <div className="row" style={{ marginTop: 6 }}>

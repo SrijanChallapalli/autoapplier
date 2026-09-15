@@ -11,7 +11,7 @@ import { StatusBadge, ConfidenceBadge, fmtDate } from "@/components/ui";
 import { buildPacket } from "@/lib/packet";
 import type { NetworkLink } from "@/lib/networking";
 import { FlagsPanel } from "@/components/FlagsPanel";
-import { ResumeChat } from "@/components/ResumeChat";
+import { ResumeEditor } from "@/components/ResumeEditor";
 
 const STATUS_OPTIONS: ApplicationStatus[] = [
   "draft",
@@ -55,22 +55,6 @@ export default function ApplicationDetailPage({
     const saved = await res.json();
     setApp(saved);
     if (msg) flash(msg);
-  }
-
-  const [genResume, setGenResume] = useState(false);
-  async function generateResume() {
-    setGenResume(true);
-    const res = await fetch(`/api/applications/${id}/tailor-resume`, {
-      method: "POST",
-    });
-    const data = await res.json();
-    setGenResume(false);
-    if (data.tailoredResume) {
-      setApp((a) => (a ? { ...a, tailoredResume: data.tailoredResume } : a));
-      flash("Tailored resume generated");
-    } else {
-      flash(data.error ?? "Couldn't tailor resume");
-    }
   }
 
   const [links, setLinks] = useState<NetworkLink[] | null>(null);
@@ -425,52 +409,19 @@ export default function ApplicationDetailPage({
       {/* --- Flags & ATS --- */}
       <FlagsPanel appId={app.id} refreshKey={app.tailoredResume ?? ""} />
 
-      {/* --- Resume editor (tailored resume + chat) --- */}
+      {/* --- Resume editor (tailored resume + chat + PDF) --- */}
       <div className="card">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div className="section-label" style={{ marginTop: 0 }}>
-            Resume editor ({app.resumeLabel ?? "no base resume"})
-          </div>
-          <button
-            className="btn btn-sm"
-            onClick={generateResume}
-            disabled={genResume}
-          >
-            {genResume
-              ? "Tailoring…"
-              : app.tailoredResume
-                ? "✨ Regenerate"
-                : "✨ Tailor for this role"}
-          </button>
-        </div>
-        <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-          Tailor and edit your resume for this role, then chat below to improve
-          it. It only ever works from your <em>real</em> experience — never
-          invents.
-        </p>
-        <textarea
-          value={app.tailoredResume ?? ""}
-          onChange={(e) =>
-            setApp((a) => (a ? { ...a, tailoredResume: e.target.value } : a))
-          }
-          onBlur={(e) => patch({ tailoredResume: e.target.value })}
-          placeholder="Generate a tailored resume draft, or chat below to build one…"
-          style={{ minHeight: 180, fontFamily: "ui-monospace, monospace", fontSize: 13 }}
-        />
-
-        <div className="section-label">Chat to improve it</div>
-        <ResumeChat
+        <ResumeEditor
           appId={app.id}
-          onApplyResume={(text) => {
+          company={app.company}
+          title={app.title}
+          resumeLabel={app.resumeLabel}
+          initialResume={app.tailoredResume ?? ""}
+          onSave={(text) => {
             setApp((a) => (a ? { ...a, tailoredResume: text } : a));
-            patch({ tailoredResume: text }, "Applied to your tailored resume");
+            patch({ tailoredResume: text });
           }}
+          onFlash={flash}
         />
       </div>
 

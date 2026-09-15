@@ -266,7 +266,8 @@ export function matchJob(job: Job, ctx: MatchContext): MatchResult {
   };
 }
 
-// Rank a set of jobs: recommended first, then by score. Ineligible sink.
+// Rank a set of jobs: recommended first, then by score, then newest first so
+// the order is stable and fresh postings surface above equally-scored stale ones.
 export function rankJobs(jobs: Job[]): Job[] {
   return [...jobs].sort((a, b) => {
     const am = a.match;
@@ -274,6 +275,7 @@ export function rankJobs(jobs: Job[]): Job[] {
     if (!am || !bm) return (bm?.score ?? -1) - (am?.score ?? -1);
     if (am.eligible !== bm.eligible) return am.eligible ? -1 : 1;
     if (am.recommended !== bm.recommended) return am.recommended ? -1 : 1;
-    return bm.score - am.score;
+    if (bm.score !== am.score) return bm.score - am.score;
+    return (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0);
   });
 }

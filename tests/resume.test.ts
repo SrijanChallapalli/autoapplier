@@ -147,6 +147,19 @@ describe("parseResumeStructured — PDF column layout (tab markers)", () => {
   });
 });
 
+describe("parseResumeStructured — link normalization", () => {
+  it("strips tracking params and trailing slashes from social links", () => {
+    const r = parseResumeStructured(
+      `Pat Kim
+pat@example.com
+https://linkedin.com/in/patkim/?utm_source=resume
+https://github.com/patkim/?tab=repos`,
+    );
+    expect(r.linkedin).toBe("https://linkedin.com/in/patkim");
+    expect(r.github).toBe("https://github.com/patkim");
+  });
+});
+
 describe("mergeExtracted", () => {
   it("prefers primary but backfills from secondary", () => {
     const merged = mergeExtracted(

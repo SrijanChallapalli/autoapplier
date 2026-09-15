@@ -2,8 +2,9 @@ import { describe, it, expect } from "vitest";
 import { htmlToText } from "../src/lib/html";
 import { parseResume } from "../src/lib/resume";
 import { buildPacket } from "../src/lib/packet";
-import { isRelevant, type RawPosting } from "../src/lib/sources";
+import { isRelevant, dedupePostings, type RawPosting } from "../src/lib/sources";
 import { coreRole, buildNetworkingLinks } from "../src/lib/networking";
+import { daysUntil, relativeDay } from "../src/lib/format";
 import type { Application } from "../src/lib/types";
 
 describe("htmlToText", () => {
@@ -69,6 +70,34 @@ describe("isRelevant", () => {
   });
 });
 
+describe("dedupePostings", () => {
+  const p = (over: Partial<RawPosting>): RawPosting => ({
+    company: "Acme",
+    title: "SWE Intern",
+    text: "role",
+    ...over,
+  });
+
+  it("collapses duplicates by URL ignoring query/hash/trailing slash", () => {
+    const out = dedupePostings([
+      p({ url: "https://jobs.acme.com/1" }),
+      p({ url: "https://jobs.acme.com/1/" }),
+      p({ url: "https://jobs.acme.com/1?utm=x#top" }),
+    ]);
+    expect(out).toHaveLength(1);
+  });
+
+  it("collapses URL-less duplicates by company + title, first wins", () => {
+    const out = dedupePostings([
+      p({ title: "SWE  Intern", text: "first" }),
+      p({ title: "swe intern", text: "second" }),
+      p({ company: "Beta", title: "SWE Intern" }),
+    ]);
+    expect(out).toHaveLength(2);
+    expect(out[0].text).toBe("first");
+  });
+});
+
 describe("networking", () => {
   it("reduces a noisy title to a core role", () => {
     expect(coreRole("Software Engineer Intern (Summer 2027)")).toMatch(
@@ -96,6 +125,25 @@ describe("networking", () => {
   it("omits the alumni link when no school is known", () => {
     const links = buildNetworkingLinks("Acme", "SWE Intern");
     expect(links.some((l) => /alumni/i.test(l.label))).toBe(false);
+  });
+});
+
+describe("relative dates", () => {
+  const now = new Date("2026-09-15T12:00:00Z");
+
+  it("counts whole calendar days regardless of time of day", () => {
+    expect(daysUntil("2026-09-18T01:00:00Z", now)).toBe(3);
+    expect(daysUntil("2026-09-13T23:00:00Z", now)).toBe(-2);
+    expect(daysUntil(undefined, now)).toBeUndefined();
+    expect(daysUntil("not-a-date", now)).toBeUndefined();
+  });
+
+  it("renders friendly relative labels", () => {
+    expect(relativeDay("2026-09-15T20:00:00Z", now)).toBe("today");
+    expect(relativeDay("2026-09-16T00:00:00Z", now)).toBe("tomorrow");
+    expect(relativeDay("2026-09-14T00:00:00Z", now)).toBe("yesterday");
+    expect(relativeDay("2026-09-20T00:00:00Z", now)).toBe("in 5 days");
+    expect(relativeDay("2026-09-10T00:00:00Z", now)).toBe("5 days ago");
   });
 });
 

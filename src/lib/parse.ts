@@ -35,19 +35,41 @@ function detectSeniority(text: string): Job["seniority"] {
 }
 
 function detectMinYears(text: string): number | undefined {
-  // "3+ years", "minimum of 5 years", "at least 2 years"
-  const matches = [...text.matchAll(/(\d+)\s*\+?\s*years?/gi)].map((m) =>
-    parseInt(m[1], 10),
-  );
-  if (matches.length === 0) return undefined;
-  return Math.min(...matches.filter((n) => !Number.isNaN(n) && n <= 20));
+  // Only count a year figure that actually refers to a work-experience
+  // requirement. Bare year counts ("graduate within 3 years", "a 4-year
+  // degree", "over the last 2 years") must NOT produce a spurious blocker.
+  const years: number[] = [];
+  const push = (raw: string) => {
+    const n = parseInt(raw, 10);
+    if (!Number.isNaN(n) && n >= 1 && n <= 20) years.push(n);
+  };
+  // "3+ years" — the explicit plus is a strong minimum-requirement signal.
+  for (const m of text.matchAll(/(\d+)\s*\+\s*years?/gi)) push(m[1]);
+  // "5 years of professional experience", "2 years' industry experience".
+  for (const m of text.matchAll(
+    /(\d+)\s*years?(?:['’]s)?\s+(?:of\s+)?(?:[\w-]+\s+){0,3}?(?:experience|exp\b|industry|professional|working|hands-on)/gi,
+  ))
+    push(m[1]);
+  // Reverse order: "experience: at least 3 years", "experience of 5+ years".
+  for (const m of text.matchAll(/experience\b[^.\n]{0,30}?(\d+)\s*\+?\s*years?/gi))
+    push(m[1]);
+  if (years.length === 0) return undefined;
+  return Math.min(...years);
 }
 
 function detectSalary(text: string): string | undefined {
-  const m = text.match(
-    /\$\s?\d{2,3}(?:,\d{3})?(?:\s?[kK])?(?:\s?[-–—to]+\s?\$?\s?\d{2,3}(?:,\d{3})?(?:\s?[kK])?)?(?:\s?(?:\/|per)\s?(?:year|yr|hour|hr))?/,
+  // A currency-prefixed amount: symbol ($ £ €) or ISO code (USD/GBP/EUR/CAD),
+  // an optional range, an optional k suffix, and an optional per-period tail.
+  // "up to $120k", "$90,000–$120,000/yr", "USD 100k - 130k per year".
+  const amount = String.raw`\d{2,3}(?:,\d{3})?(?:\s?[kK])?`;
+  const re = new RegExp(
+    String.raw`(?:up to\s*)?(?:[$£€]|\b(?:USD|GBP|EUR|CAD|AUD)\b)\s?${amount}` +
+      String.raw`(?:\s?[-–—]+\s?|\s+to\s+)?(?:[$£€]\s?)?(?:${amount})?` +
+      String.raw`(?:\s?(?:\/|per)\s?(?:year|yr|hour|hr|month|mo))?`,
+    "i",
   );
-  return m ? m[0].trim() : undefined;
+  const m = text.match(re);
+  return m ? m[0].replace(/\s+/g, " ").trim() : undefined;
 }
 
 // Try to split a description into required vs nice-to-have sections.
