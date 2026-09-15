@@ -36,6 +36,7 @@ export default function ProfilePage() {
     aiUsed?: boolean;
   } | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
 
   useEffect(() => {
     fetch("/api/profile")
@@ -47,34 +48,36 @@ export default function ProfilePage() {
     setP((prev) => (prev ? { ...prev, [key]: value } : prev));
   }
 
-  async function save() {
-    if (!p) return;
-    setBusy(true);
+  async function persist(profile: Profile): Promise<Profile> {
     const res = await fetch("/api/profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(p),
+      body: JSON.stringify(profile),
     });
-    const saved = await res.json();
+    return res.json();
+  }
+
+  async function save() {
+    if (!p) return;
+    setBusy(true);
+    const saved = await persist(p);
     setP(saved);
     setBusy(false);
-    setToast("Profile saved — all job matches recomputed");
-    setTimeout(() => setToast(null), 3000);
+    flash("Profile saved — all job matches recomputed");
   }
 
   async function uploadResume(file: File) {
     setUploading(true);
     setResume(null);
+    setReviewing(false);
     const fd = new FormData();
     fd.append("file", file);
     const res = await fetch("/api/profile/resume", { method: "POST", body: fd });
     const data = await res.json();
     setUploading(false);
-    if (data.skills) {
+    if (data.skills || data.extracted) {
       setResume(data);
-      flash(
-        `Read ${data.chars.toLocaleString()} characters · found ${data.skills.length} skills`,
-      );
+      setReviewing(true); // open the review-and-confirm panel
     } else {
       flash(data.error ?? "Couldn't read that file");
     }
@@ -85,8 +88,9 @@ export default function ProfilePage() {
     setTimeout(() => setToast(null), 3200);
   }
 
-  function autofillFromResume() {
-    if (!p || !resume) return;
+  // Build the merged profile the review panel will apply on confirm.
+  function buildMerged(): Profile | null {
+    if (!p || !resume) return null;
     const ex = resume.extracted ?? {};
     const next: Profile = { ...p };
 
@@ -148,10 +152,19 @@ export default function ProfilePage() {
       }));
     next.projects = [...p.projects, ...addedProj];
 
-    setP(next);
-    flash(
-      `Autofilled from resume: +${newSkills.length} skills, +${addedExp.length} roles, +${addedProj.length} projects — review & Save`,
-    );
+    return next;
+  }
+
+  async function confirmAutofill() {
+    const merged = buildMerged();
+    if (!merged) return;
+    setBusy(true);
+    const saved = await persist(merged);
+    setP(saved);
+    setBusy(false);
+    setReviewing(false);
+    setResume(null);
+    flash("Profile filled from your resume and saved");
   }
 
   if (!p) return <p className="muted">Loading…</p>;
@@ -183,8 +196,10 @@ export default function ProfilePage() {
           Import from resume
         </div>
         <p className="muted" style={{ marginTop: 0 }}>
-          Upload a PDF or text resume and we&apos;ll pull out your skills to add
-          here. Nothing is invented — everything comes from your file.
+          Upload a PDF or text resume and we&apos;ll read the whole thing —
+          contact, education, experience, projects, and skills — then let you
+          review before saving. Nothing is invented; everything comes from your
+          file.
         </p>
         <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
           <label
@@ -204,53 +219,22 @@ export default function ProfilePage() {
               }}
             />
           </label>
-          {resume && (
-            <span className="muted">
-              {resume.fileName} · {resume.skills.length} skills found
-            </span>
+          {resume && !reviewing && (
+            <span className="muted">{resume.fileName} imported</span>
           )}
         </div>
-        {resume && (
-          <>
-            <div className="chips" style={{ marginTop: 12 }}>
-              {resume.skills.map((s) => (
-                <span key={s} className="chip match">
-                  {s}
-                </span>
-              ))}
-              {resume.skills.length === 0 && (
-                <span className="muted">No known skills detected.</span>
-              )}
-            </div>
-            {resume.extracted && (
-              <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>
-                Also read:{" "}
-                {[
-                  resume.extracted.fullName && "name",
-                  resume.extracted.university && "school",
-                  resume.extracted.experience?.length &&
-                    `${resume.extracted.experience.length} roles`,
-                  resume.extracted.projects?.length &&
-                    `${resume.extracted.projects.length} projects`,
-                ]
-                  .filter(Boolean)
-                  .join(" · ") || "contact details"}
-              </p>
-            )}
-            {!resume.aiUsed && (
-              <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>
-                Add an AI key (Settings) to also auto-extract your experience,
-                education, and projects — not just skills.
-              </p>
-            )}
-            <button
-              className="btn btn-sm btn-primary"
-              style={{ marginTop: 10 }}
-              onClick={autofillFromResume}
-            >
-              Autofill profile from resume
-            </button>
-          </>
+
+        {reviewing && resume?.extracted && (
+          <ResumeReview
+            data={resume}
+            current={p}
+            onConfirm={confirmAutofill}
+            onCancel={() => {
+              setReviewing(false);
+              setResume(null);
+            }}
+            busy={busy}
+          />
         )}
       </div>
 
@@ -562,6 +546,183 @@ export default function ProfilePage() {
 
       {toast && <div className="toast">{toast}</div>}
     </>
+  );
+}
+
+interface ReviewData {
+  fileName?: string;
+  aiUsed?: boolean;
+  chars?: number;
+  extracted?: ExtractedProfile | null;
+}
+
+function ResumeReview({
+  data,
+  current,
+  onConfirm,
+  onCancel,
+  busy,
+}: {
+  data: ReviewData;
+  current: Profile;
+  onConfirm: () => void;
+  onCancel: () => void;
+  busy: boolean;
+}) {
+  const ex = data.extracted ?? {};
+  const contact: { label: string; val?: string; had: boolean }[] = [
+    { label: "Name", val: ex.fullName, had: !!current.fullName },
+    { label: "Email", val: ex.email, had: !!current.email },
+    { label: "Phone", val: ex.phone, had: !!current.phone },
+    { label: "Location", val: ex.location, had: !!current.location },
+    { label: "LinkedIn", val: ex.linkedin, had: !!current.linkedin },
+    { label: "GitHub", val: ex.github, had: !!current.github },
+    { label: "Portfolio", val: ex.portfolio, had: !!current.portfolio },
+    { label: "University", val: ex.university, had: !!current.university },
+    { label: "Major", val: ex.major, had: !!current.major },
+    { label: "Graduation", val: ex.graduationDate, had: !!current.graduationDate },
+    { label: "GPA", val: ex.gpa, had: !!current.gpa },
+  ].filter((r) => r.val);
+
+  const haveSkills = new Set(current.skills.map((s) => s.toLowerCase()));
+  const newSkills = (ex.skills ?? []).filter(
+    (s) => !haveSkills.has(s.toLowerCase()),
+  );
+
+  return (
+    <div
+      style={{
+        border: "1px solid var(--primary)",
+        borderRadius: 10,
+        padding: 14,
+        marginTop: 14,
+        background: "var(--primary-soft)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 10,
+          flexWrap: "wrap",
+        }}
+      >
+        <strong>Review what we found in {data.fileName ?? "your resume"}</strong>
+        <span className="badge neutral">
+          {data.aiUsed ? "AI + text parse" : "text parse"}
+        </span>
+      </div>
+      <p className="muted" style={{ margin: "6px 0 0", fontSize: 13 }}>
+        Confirm to fill your profile and save. Empty fields get filled; anything
+        you&apos;ve already entered is kept; roles/projects are added. You can
+        still edit everything afterward.
+      </p>
+
+      {contact.length > 0 && (
+        <>
+          <div className="section-label">Contact &amp; education</div>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <tbody>
+              {contact.map((r) => (
+                <tr key={r.label}>
+                  <td
+                    style={{
+                      padding: "3px 8px 3px 0",
+                      color: "var(--text-muted)",
+                      width: 120,
+                      verticalAlign: "top",
+                    }}
+                  >
+                    {r.label}
+                  </td>
+                  <td style={{ padding: "3px 0" }}>
+                    {r.val}
+                    {r.had && (
+                      <span className="faint" style={{ marginLeft: 8, fontSize: 12 }}>
+                        (keeping your current value)
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {newSkills.length > 0 && (
+        <>
+          <div className="section-label">Skills to add ({newSkills.length})</div>
+          <div className="chips">
+            {newSkills.map((s) => (
+              <span key={s} className="chip match">
+                {s}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+
+      {(ex.experience?.length ?? 0) > 0 && (
+        <>
+          <div className="section-label">
+            Experience to add ({ex.experience!.length})
+          </div>
+          {ex.experience!.map((e, i) => (
+            <div key={i} style={{ marginBottom: 8 }}>
+              <div style={{ fontWeight: 600 }}>
+                {[e.title, e.company].filter(Boolean).join(" · ") || "Role"}
+                {(e.startDate || e.endDate) && (
+                  <span className="faint" style={{ marginLeft: 8, fontWeight: 400 }}>
+                    {[e.startDate, e.endDate].filter(Boolean).join(" – ")}
+                  </span>
+                )}
+              </div>
+              {e.bullets && e.bullets.length > 0 && (
+                <ul className="clean" style={{ fontSize: 13 }}>
+                  {e.bullets.slice(0, 4).map((b, j) => (
+                    <li key={j}>{b}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </>
+      )}
+
+      {(ex.projects?.length ?? 0) > 0 && (
+        <>
+          <div className="section-label">
+            Projects to add ({ex.projects!.length})
+          </div>
+          {ex.projects!.map((pr, i) => (
+            <div key={i} style={{ marginBottom: 6 }}>
+              <span style={{ fontWeight: 600 }}>{pr.name || "Project"}</span>
+              {pr.description && (
+                <span className="muted"> — {pr.description}</span>
+              )}
+            </div>
+          ))}
+        </>
+      )}
+
+      {!data.aiUsed && (
+        <p className="muted" style={{ marginTop: 10, fontSize: 13 }}>
+          Tip: add an AI key in Settings for more accurate experience/project
+          parsing on complex resumes.
+        </p>
+      )}
+
+      <div className="btn-row" style={{ marginTop: 14 }}>
+        <button className="btn btn-primary" onClick={onConfirm} disabled={busy}>
+          {busy ? "Saving…" : "Confirm & fill my profile"}
+        </button>
+        <button className="btn" onClick={onCancel} disabled={busy}>
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }
 
