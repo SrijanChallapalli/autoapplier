@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { htmlToText } from "../src/lib/html";
 import { parseResume } from "../src/lib/resume";
 import { buildPacket } from "../src/lib/packet";
-import { isRelevant, type RawPosting } from "../src/lib/sources";
+import { isRelevant, dedupePostings, type RawPosting } from "../src/lib/sources";
 import { coreRole, buildNetworkingLinks } from "../src/lib/networking";
 import type { Application } from "../src/lib/types";
 
@@ -66,6 +66,34 @@ describe("isRelevant", () => {
         keywords: ["golang"],
       }),
     ).toBe(false);
+  });
+});
+
+describe("dedupePostings", () => {
+  const p = (over: Partial<RawPosting>): RawPosting => ({
+    company: "Acme",
+    title: "SWE Intern",
+    text: "role",
+    ...over,
+  });
+
+  it("collapses duplicates by URL ignoring query/hash/trailing slash", () => {
+    const out = dedupePostings([
+      p({ url: "https://jobs.acme.com/1" }),
+      p({ url: "https://jobs.acme.com/1/" }),
+      p({ url: "https://jobs.acme.com/1?utm=x#top" }),
+    ]);
+    expect(out).toHaveLength(1);
+  });
+
+  it("collapses URL-less duplicates by company + title, first wins", () => {
+    const out = dedupePostings([
+      p({ title: "SWE  Intern", text: "first" }),
+      p({ title: "swe intern", text: "second" }),
+      p({ company: "Beta", title: "SWE Intern" }),
+    ]);
+    expect(out).toHaveLength(2);
+    expect(out[0].text).toBe("first");
   });
 });
 

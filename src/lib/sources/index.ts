@@ -119,6 +119,23 @@ export function isRelevant(p: RawPosting, opts: IngestOptions): boolean {
   return TECH_RE.test(p.title);
 }
 
+// Collapse duplicate postings: the same role can surface from more than one
+// board (or twice within one), so key on the URL when present, else on the
+// normalized company + title. First occurrence wins.
+export function dedupePostings(postings: RawPosting[]): RawPosting[] {
+  const seen = new Set<string>();
+  const out: RawPosting[] = [];
+  for (const p of postings) {
+    const key = p.url
+      ? p.url.trim().toLowerCase().replace(/[?#].*$/, "").replace(/\/+$/, "")
+      : `${p.company} ${p.title}`.toLowerCase().replace(/\s+/g, " ").trim();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(p);
+  }
+  return out;
+}
+
 // --- Public entrypoint ------------------------------------------------------
 
 export interface IngestResult {
@@ -149,7 +166,7 @@ export async function fetchLivePostings(
   });
 
   return {
-    postings,
+    postings: dedupePostings(postings),
     companiesTried: companies.length,
     companiesReturned,
   };
