@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ingestLiveJobs } from "@/lib/service";
+import { withAiCredentials } from "@/lib/aiContext";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
   }
-  const summary = await ingestLiveJobs();
+  const summary = await withAiCredentials(req, () => ingestLiveJobs());
   return NextResponse.json({ ranAt: new Date().toISOString(), ...summary });
 }

@@ -6,6 +6,7 @@ import {
   mergeExtracted,
 } from "@/lib/resume";
 import { aiEnabled, aiExtractProfile } from "@/lib/ai";
+import { withAiCredentials } from "@/lib/aiContext";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,10 @@ const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 // Accepts multipart/form-data with a "file" field (PDF, .txt, or .md).
 // Returns extracted text + suggested skills/links for the user to review.
 export async function POST(req: Request) {
+  return withAiCredentials(req, () => handleResumeUpload(req));
+}
+
+async function handleResumeUpload(req: Request) {
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) {
