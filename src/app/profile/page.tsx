@@ -7,6 +7,7 @@ import type {
   ResumeVariant,
   WorkExperience,
 } from "@/lib/types";
+import type { ExtractedProfile } from "@/lib/ai";
 
 function commaList(arr: string[]): string {
   return arr.join(", ");
@@ -27,6 +28,12 @@ export default function ProfilePage() {
     skills: string[];
     links: string[];
     chars: number;
+    phone?: string;
+    linkedin?: string;
+    github?: string;
+    portfolio?: string;
+    extracted?: ExtractedProfile | null;
+    aiUsed?: boolean;
   } | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -78,12 +85,73 @@ export default function ProfilePage() {
     setTimeout(() => setToast(null), 3200);
   }
 
-  function mergeResumeSkills() {
+  function autofillFromResume() {
     if (!p || !resume) return;
+    const ex = resume.extracted ?? {};
+    const next: Profile = { ...p };
+
+    // Contact / education — fill only empty fields so we never clobber edits.
+    const rec = next as unknown as Record<string, unknown>;
+    const fillEmpty = (key: keyof Profile, val?: string) => {
+      if (val && !String(rec[key as string] ?? "").trim()) {
+        rec[key as string] = val;
+      }
+    };
+    fillEmpty("fullName", ex.fullName);
+    fillEmpty("email", ex.email || resume.links.find((l) => l.includes("@")));
+    fillEmpty("phone", ex.phone || resume.phone);
+    fillEmpty("location", ex.location);
+    fillEmpty("linkedin", ex.linkedin || resume.linkedin);
+    fillEmpty("github", ex.github || resume.github);
+    fillEmpty("portfolio", ex.portfolio || resume.portfolio);
+    fillEmpty("university", ex.university);
+    fillEmpty("major", ex.major);
+    fillEmpty("degree", ex.degree);
+    fillEmpty("graduationDate", ex.graduationDate);
+    fillEmpty("gpa", ex.gpa);
+
+    // Skills — merge (deduped).
     const have = new Set(p.skills.map((s) => s.toLowerCase()));
-    const added = resume.skills.filter((s) => !have.has(s.toLowerCase()));
-    set("skills", [...p.skills, ...added]);
-    flash(`Added ${added.length} new skill${added.length === 1 ? "" : "s"} — remember to Save`);
+    const newSkills = [...(ex.skills ?? []), ...resume.skills].filter(
+      (s) => s && !have.has(s.toLowerCase()) && (have.add(s.toLowerCase()), true),
+    );
+    next.skills = [...p.skills, ...newSkills];
+
+    // Experience — append entries not already present (by title+company).
+    const haveExp = new Set(
+      p.experience.map((e) => `${e.title}::${e.company}`.toLowerCase()),
+    );
+    const addedExp: WorkExperience[] = (ex.experience ?? [])
+      .filter((e) => e.title || e.company)
+      .filter((e) => !haveExp.has(`${e.title ?? ""}::${e.company ?? ""}`.toLowerCase()))
+      .map((e, i) => ({
+        id: `exp_${Date.now()}_${i}`,
+        title: e.title ?? "",
+        company: e.company ?? "",
+        startDate: e.startDate,
+        endDate: e.endDate,
+        bullets: e.bullets ?? [],
+      }));
+    next.experience = [...p.experience, ...addedExp];
+
+    // Projects — append entries not already present (by name).
+    const haveProj = new Set(p.projects.map((pr) => pr.name.toLowerCase()));
+    const addedProj: Project[] = (ex.projects ?? [])
+      .filter((pr) => pr.name)
+      .filter((pr) => !haveProj.has((pr.name ?? "").toLowerCase()))
+      .map((pr, i) => ({
+        id: `proj_${Date.now()}_${i}`,
+        name: pr.name ?? "",
+        description: pr.description ?? "",
+        link: pr.link,
+        bullets: pr.bullets ?? [],
+      }));
+    next.projects = [...p.projects, ...addedProj];
+
+    setP(next);
+    flash(
+      `Autofilled from resume: +${newSkills.length} skills, +${addedExp.length} roles, +${addedProj.length} projects — review & Save`,
+    );
   }
 
   if (!p) return <p className="muted">Loading…</p>;
@@ -154,20 +222,34 @@ export default function ProfilePage() {
                 <span className="muted">No known skills detected.</span>
               )}
             </div>
-            {resume.links.length > 0 && (
+            {resume.extracted && (
               <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>
-                Links found: {resume.links.slice(0, 4).join("  ·  ")}
+                Also read:{" "}
+                {[
+                  resume.extracted.fullName && "name",
+                  resume.extracted.university && "school",
+                  resume.extracted.experience?.length &&
+                    `${resume.extracted.experience.length} roles`,
+                  resume.extracted.projects?.length &&
+                    `${resume.extracted.projects.length} projects`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || "contact details"}
               </p>
             )}
-            {resume.skills.length > 0 && (
-              <button
-                className="btn btn-sm btn-primary"
-                style={{ marginTop: 10 }}
-                onClick={mergeResumeSkills}
-              >
-                Add new skills to profile
-              </button>
+            {!resume.aiUsed && (
+              <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>
+                Add an AI key (Settings) to also auto-extract your experience,
+                education, and projects — not just skills.
+              </p>
             )}
+            <button
+              className="btn btn-sm btn-primary"
+              style={{ marginTop: 10 }}
+              onClick={autofillFromResume}
+            >
+              Autofill profile from resume
+            </button>
           </>
         )}
       </div>

@@ -3,6 +3,7 @@ import { htmlToText } from "../src/lib/html";
 import { parseResume } from "../src/lib/resume";
 import { buildPacket } from "../src/lib/packet";
 import { isRelevant, type RawPosting } from "../src/lib/sources";
+import { coreRole, buildNetworkingLinks } from "../src/lib/networking";
 import type { Application } from "../src/lib/types";
 
 describe("htmlToText", () => {
@@ -65,6 +66,36 @@ describe("isRelevant", () => {
         keywords: ["golang"],
       }),
     ).toBe(false);
+  });
+});
+
+describe("networking", () => {
+  it("reduces a noisy title to a core role", () => {
+    expect(coreRole("Software Engineer Intern (Summer 2027)")).toMatch(
+      /software engineer/i,
+    );
+    expect(coreRole("Senior Machine Learning Engineer")).toMatch(
+      /machine learning engineer/i,
+    );
+  });
+
+  it("builds recruiter/role links and an alumni link when a school is given", () => {
+    const links = buildNetworkingLinks("Acme", "SWE Intern", "State University");
+    expect(links.length).toBeGreaterThanOrEqual(4);
+    expect(links.every((l) => l.url.startsWith("https://"))).toBe(true);
+    expect(links.some((l) => /recruiter/i.test(l.label))).toBe(true);
+    expect(links.some((l) => /alumni/i.test(l.label))).toBe(true);
+    // Company name is encoded into every LinkedIn search.
+    expect(
+      links.filter((l) => l.url.includes("linkedin.com")).every((l) =>
+        l.url.includes("Acme"),
+      ),
+    ).toBe(true);
+  });
+
+  it("omits the alumni link when no school is known", () => {
+    const links = buildNetworkingLinks("Acme", "SWE Intern");
+    expect(links.some((l) => /alumni/i.test(l.label))).toBe(false);
   });
 });
 

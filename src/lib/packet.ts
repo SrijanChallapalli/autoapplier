@@ -33,6 +33,12 @@ export function buildPacket(app: Application): string {
     L.push("");
   }
 
+  if (app.tailoredResume && app.tailoredResume.trim()) {
+    L.push("## Tailored resume");
+    L.push(app.tailoredResume.trim());
+    L.push("");
+  }
+
   if (app.coverLetter && app.coverLetter.trim()) {
     L.push("## Cover letter");
     L.push(app.coverLetter.trim());

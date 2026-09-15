@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { extractResumeText, parseResume } from "@/lib/resume";
+import { aiEnabled, aiExtractProfile } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,13 +39,23 @@ export async function POST(req: Request) {
         { status: 422 },
       );
     }
+    // Deterministic contact fields always available; rich structured fields
+    // (experience/education/projects) come from the LLM when a key is present.
+    const extracted = aiEnabled() ? await aiExtractProfile(parsed.text) : null;
+
     return NextResponse.json({
       fileName: file.name,
       skills: parsed.skills,
       emails: parsed.emails,
       links: parsed.links,
+      phone: parsed.phone,
+      linkedin: parsed.linkedin,
+      github: parsed.github,
+      portfolio: parsed.portfolio,
       chars: parsed.chars,
       preview: parsed.text.slice(0, 1500),
+      extracted, // full structured profile (LLM), or null
+      aiUsed: Boolean(extracted),
     });
   } catch {
     return NextResponse.json(

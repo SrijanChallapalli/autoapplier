@@ -194,6 +194,7 @@ export interface Application {
   recruiter?: Recruiter;
   interviewStages: InterviewStage[];
   coverLetter?: string;
+  tailoredResume?: string;
 
   createdAt: string;
   updatedAt: string;

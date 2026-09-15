@@ -33,6 +33,11 @@ Self-directed tickets toward a production-ready app. Checked = shipped & verifie
 - [x] T18 Expand tests: sources relevance filter, html strip, resume, packet
 - [x] T19 Jobs search/filter UX
 
+## Round 3
+- [x] T20 Resume → full structured profile autofill (LLM + deterministic fallback)
+- [x] T21 Per-internship resume tailoring (grounded, never invents), editable + export
+- [x] T22 Networking: LinkedIn/Google search links (recruiters, team, alumni) + outreach draft
+
 ## Deferred (needs your input)
 - Neon provisioning + Vercel deploy (needs your Vercel login) — code is ready;
   just set DATABASE_URL + deploy
