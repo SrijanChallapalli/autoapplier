@@ -12,6 +12,7 @@ import { buildPacket } from "@/lib/packet";
 import type { NetworkLink } from "@/lib/networking";
 import { FlagsPanel } from "@/components/FlagsPanel";
 import { ResumeChat } from "@/components/ResumeChat";
+import { ResumeEditor } from "@/components/ResumeEditor";
 
 const STATUS_OPTIONS: ApplicationStatus[] = [
   "draft",
@@ -450,18 +451,18 @@ export default function ApplicationDetailPage({
           </button>
         </div>
         <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-          Tailor and edit your resume for this role, then chat below to improve
-          it. It only ever works from your <em>real</em> experience — never
-          invents.
+          Tailor and edit your resume for this role, see it laid out as a real
+          page, and download a PDF. It only ever works from your <em>real</em>{" "}
+          experience — never invents.
         </p>
-        <textarea
+        <ResumeEditor
           value={app.tailoredResume ?? ""}
-          onChange={(e) =>
-            setApp((a) => (a ? { ...a, tailoredResume: e.target.value } : a))
+          onChange={(text) =>
+            setApp((a) => (a ? { ...a, tailoredResume: text } : a))
           }
-          onBlur={(e) => patch({ tailoredResume: e.target.value })}
-          placeholder="Generate a tailored resume draft, or chat below to build one…"
-          style={{ minHeight: 180, fontFamily: "ui-monospace, monospace", fontSize: 13 }}
+          onSave={(text) => patch({ tailoredResume: text })}
+          fileBase={`${app.company} — ${app.title}`}
+          onFlash={flash}
         />
 
         <div className="section-label">Chat to improve it</div>
