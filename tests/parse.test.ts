@@ -66,4 +66,18 @@ describe("parseJob", () => {
     const job = parseJob({ text: "Visa sponsorship is available for this role." });
     expect(job.sponsorshipOffered).toBe(true);
   });
+
+  it("only counts years tied to experience, not incidental year counts", () => {
+    // "within 4 years of graduation" and "4-year degree" are not experience
+    // requirements and must not become a blocker.
+    const clean = parseJob({
+      text: "Open to students graduating within 4 years. A 4-year degree is expected.",
+    });
+    expect(clean.minYearsExperience).toBeUndefined();
+
+    // A real requirement is still detected, in either phrasing.
+    expect(parseJob({ text: "Requires 3+ years of software work." }).minYearsExperience).toBe(3);
+    expect(parseJob({ text: "5 years of professional experience." }).minYearsExperience).toBe(5);
+    expect(parseJob({ text: "Experience: at least 2 years." }).minYearsExperience).toBe(2);
+  });
 });
