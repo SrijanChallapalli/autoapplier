@@ -34,6 +34,7 @@ export default function ProfilePage() {
     portfolio?: string;
     extracted?: ExtractedProfile | null;
     aiUsed?: boolean;
+    preview?: string;
   } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [reviewing, setReviewing] = useState(false);
@@ -558,6 +559,7 @@ interface ReviewData {
   fileName?: string;
   aiUsed?: boolean;
   chars?: number;
+  preview?: string;
   extracted?: ExtractedProfile | null;
 }
 
@@ -712,7 +714,42 @@ function ResumeReview({
         </>
       )}
 
-      {!data.aiUsed && (
+      {(ex.experience?.length ?? 0) === 0 &&
+        (ex.projects?.length ?? 0) === 0 && (
+          <p
+            className="muted"
+            style={{ marginTop: 10, fontSize: 13, color: "var(--amber)" }}
+          >
+            Couldn&apos;t confidently parse work experience or projects from this
+            file&apos;s layout. Your contact/skills are still filled — you can add
+            roles manually below, or add an AI key in Settings for more accurate
+            parsing of complex resumes.
+          </p>
+        )}
+
+      {data.preview && (
+        <details style={{ marginTop: 10 }}>
+          <summary className="muted" style={{ cursor: "pointer", fontSize: 13 }}>
+            Show the text we read from your file
+          </summary>
+          <pre
+            style={{
+              whiteSpace: "pre-wrap",
+              fontSize: 12,
+              maxHeight: 220,
+              overflow: "auto",
+              background: "var(--surface-2)",
+              padding: 10,
+              borderRadius: 8,
+              marginTop: 8,
+            }}
+          >
+            {data.preview}
+          </pre>
+        </details>
+      )}
+
+      {!data.aiUsed && (ex.experience?.length ?? 0) > 0 && (
         <p className="muted" style={{ marginTop: 10, fontSize: 13 }}>
           Tip: add an AI key in Settings for more accurate experience/project
           parsing on complex resumes.
