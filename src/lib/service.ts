@@ -27,9 +27,12 @@ import {
   aiMatchNarrative,
   aiDraftAnswer,
   aiCoverLetter,
+  aiTailorResume,
+  aiOutreachMessage,
   aiEnabled,
   aiModel,
 } from "./ai";
+import { buildNetworkingLinks, type NetworkLink } from "./networking";
 import { extractSkills } from "./skills";
 import {
   fetchLivePostings,
@@ -264,6 +267,65 @@ export async function generateCoverLetter(
   if (!letter) return { error: "The cover letter request failed — try again." };
   await upsertApplication({ ...app, coverLetter: letter });
   return { coverLetter: letter };
+}
+
+// Generate a tailored resume for an application and persist it.
+export async function generateTailoredResume(
+  applicationId: string,
+): Promise<{ tailoredResume?: string; error?: string }> {
+  if (!aiEnabled()) {
+    return {
+      error:
+        "Resume tailoring needs an AI Gateway key (AI_GATEWAY_API_KEY). Add one to enable.",
+    };
+  }
+  const app = await getApplication(applicationId);
+  if (!app) return { error: "Application not found" };
+  const job = await getJob(app.jobId);
+  const profile = await getProfile();
+  if (profile.experience.length === 0 && profile.projects.length === 0) {
+    return {
+      error:
+        "Add some experience or projects to your profile first (or upload a resume) — tailoring only rearranges your real content.",
+    };
+  }
+  const resume = await aiTailorResume(
+    job ?? ({ company: app.company, title: app.title, description: "" } as never),
+    profile,
+  );
+  if (!resume) return { error: "The tailoring request failed — try again." };
+  await upsertApplication({ ...app, tailoredResume: resume });
+  return { tailoredResume: resume };
+}
+
+// --- Networking -------------------------------------------------------------
+
+export async function networkingForApplication(
+  applicationId: string,
+): Promise<{ links?: NetworkLink[]; error?: string }> {
+  const app = await getApplication(applicationId);
+  if (!app) return { error: "Application not found" };
+  const profile = await getProfile();
+  return {
+    links: buildNetworkingLinks(app.company, app.title, profile.university),
+  };
+}
+
+export async function outreachForApplication(
+  applicationId: string,
+): Promise<{ message?: string; error?: string }> {
+  if (!aiEnabled()) {
+    return {
+      error:
+        "Outreach drafting needs an AI Gateway key (AI_GATEWAY_API_KEY). Add one to enable.",
+    };
+  }
+  const app = await getApplication(applicationId);
+  if (!app) return { error: "Application not found" };
+  const profile = await getProfile();
+  const message = await aiOutreachMessage(app.company, app.title, profile);
+  if (!message) return { error: "The outreach request failed — try again." };
+  return { message };
 }
 
 export function aiStatus(): { enabled: boolean; model: string | null } {

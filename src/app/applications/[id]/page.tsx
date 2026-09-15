@@ -9,6 +9,7 @@ import type {
 } from "@/lib/types";
 import { StatusBadge, ConfidenceBadge, fmtDate } from "@/components/ui";
 import { buildPacket } from "@/lib/packet";
+import type { NetworkLink } from "@/lib/networking";
 
 const STATUS_OPTIONS: ApplicationStatus[] = [
   "draft",
@@ -52,6 +53,42 @@ export default function ApplicationDetailPage({
     const saved = await res.json();
     setApp(saved);
     if (msg) flash(msg);
+  }
+
+  const [genResume, setGenResume] = useState(false);
+  async function generateResume() {
+    setGenResume(true);
+    const res = await fetch(`/api/applications/${id}/tailor-resume`, {
+      method: "POST",
+    });
+    const data = await res.json();
+    setGenResume(false);
+    if (data.tailoredResume) {
+      setApp((a) => (a ? { ...a, tailoredResume: data.tailoredResume } : a));
+      flash("Tailored resume generated");
+    } else {
+      flash(data.error ?? "Couldn't tailor resume");
+    }
+  }
+
+  const [links, setLinks] = useState<NetworkLink[] | null>(null);
+  const [outreach, setOutreach] = useState("");
+  const [genOutreach, setGenOutreach] = useState(false);
+  useEffect(() => {
+    fetch(`/api/applications/${id}/networking`)
+      .then((r) => r.json())
+      .then((d) => setLinks(d.links ?? null))
+      .catch(() => {});
+  }, [id]);
+  async function draftOutreach() {
+    setGenOutreach(true);
+    const res = await fetch(`/api/applications/${id}/networking`, {
+      method: "POST",
+    });
+    const data = await res.json();
+    setGenOutreach(false);
+    if (data.message) setOutreach(data.message);
+    else flash(data.error ?? "Couldn't draft outreach");
   }
 
   const [genLetter, setGenLetter] = useState(false);
@@ -381,6 +418,113 @@ export default function ApplicationDetailPage({
             )
           }
         />
+      </div>
+
+      {/* --- Tailored resume --- */}
+      <div className="card">
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div className="section-label" style={{ marginTop: 0 }}>
+            Tailored resume ({app.resumeLabel ?? "no base resume"})
+          </div>
+          <button
+            className="btn btn-sm"
+            onClick={generateResume}
+            disabled={genResume}
+          >
+            {genResume
+              ? "Tailoring…"
+              : app.tailoredResume
+                ? "✨ Regenerate"
+                : "✨ Tailor for this role"}
+          </button>
+        </div>
+        <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+          Reorders and rephrases your <em>real</em> experience to match this job
+          — never adds anything you didn&apos;t do. Edit freely.
+        </p>
+        <textarea
+          value={app.tailoredResume ?? ""}
+          onChange={(e) =>
+            setApp((a) => (a ? { ...a, tailoredResume: e.target.value } : a))
+          }
+          onBlur={(e) => patch({ tailoredResume: e.target.value })}
+          placeholder="Generate a tailored resume draft for this specific internship…"
+          style={{ minHeight: 180, fontFamily: "ui-monospace, monospace", fontSize: 13 }}
+        />
+      </div>
+
+      {/* --- Networking --- */}
+      <div className="card">
+        <div className="section-label" style={{ marginTop: 0 }}>
+          Find people who work here
+        </div>
+        <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+          One-click searches to open in your own LinkedIn — recruiters, people in
+          the role, and alumni from your school. (No scraping; you stay logged
+          in and in control.)
+        </p>
+        {links && links.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {links.map((l) => (
+              <a
+                key={l.url}
+                href={l.url}
+                target="_blank"
+                rel="noreferrer"
+                className="btn"
+                style={{ textAlign: "left", display: "block" }}
+              >
+                🔗 {l.label}
+                <span
+                  className="faint"
+                  style={{ display: "block", fontWeight: 400, fontSize: 12 }}
+                >
+                  {l.desc}
+                </span>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">Loading search links…</p>
+        )}
+
+        <div className="section-label">Outreach note</div>
+        <button
+          className="btn btn-sm"
+          onClick={draftOutreach}
+          disabled={genOutreach}
+        >
+          {genOutreach ? "Drafting…" : "✨ Draft a connection note"}
+        </button>
+        {outreach && (
+          <>
+            <textarea
+              value={outreach}
+              onChange={(e) => setOutreach(e.target.value)}
+              style={{ minHeight: 80, marginTop: 10 }}
+            />
+            <button
+              className="btn btn-sm"
+              style={{ marginTop: 8 }}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(outreach);
+                  flash("Outreach note copied");
+                } catch {
+                  flash("Copy blocked — select the text manually");
+                }
+              }}
+            >
+              ⧉ Copy note
+            </button>
+          </>
+        )}
       </div>
 
       {/* --- Cover letter --- */}

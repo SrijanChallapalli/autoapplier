@@ -78,6 +78,80 @@ export function aiModel(): string {
   return process.env.AI_MODEL || "anthropic/claude-sonnet-5";
 }
 
+// A short, grounded LinkedIn outreach note to a recruiter/employee at a company.
+export async function aiOutreachMessage(
+  company: string,
+  title: string,
+  profile: Profile,
+): Promise<string | null> {
+  return chat(
+    [
+      "Write a short LinkedIn connection note (max ~300 characters) to a recruiter",
+      "or employee, expressing interest in a role. Rules:",
+      "- Warm, specific, humble; no flattery clichés or buzzwords.",
+      "- Use only real facts about the candidate. Never invent.",
+      "- Mention they're a student and the specific role/company.",
+      "- Output only the message text (a placeholder like [Name] for the recipient is fine).",
+    ].join("\n"),
+    `Candidate: ${profile.fullName || "a student"}, ${profile.major || ""} at ${
+      profile.university || "university"
+    }. Interested in: ${title} at ${company}. Key skills: ${profile.skills
+      .slice(0, 6)
+      .join(", ")}.`,
+  );
+}
+
+export interface ExtractedProfile {
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  linkedin?: string;
+  github?: string;
+  portfolio?: string;
+  university?: string;
+  major?: string;
+  degree?: string;
+  graduationDate?: string;
+  gpa?: string;
+  skills?: string[];
+  experience?: {
+    title?: string;
+    company?: string;
+    startDate?: string;
+    endDate?: string;
+    bullets?: string[];
+  }[];
+  projects?: { name?: string; description?: string; link?: string; bullets?: string[] }[];
+}
+
+// Extract a structured profile from resume text. Extraction only — every field
+// must come verbatim (or lightly normalized) from the resume; never invent.
+export async function aiExtractProfile(
+  resumeText: string,
+): Promise<ExtractedProfile | null> {
+  const out = await chat(
+    [
+      "Extract a candidate profile from the resume text as strict JSON.",
+      "Schema keys: fullName, email, phone, location, linkedin, github, portfolio,",
+      "university, major, degree, graduationDate (YYYY-MM if possible), gpa,",
+      "skills (string[]), experience ([{title, company, startDate, endDate, bullets[]}]),",
+      "projects ([{name, description, link, bullets[]}]).",
+      "Rules: use ONLY what appears in the resume. Omit any field you can't find.",
+      "Never invent employers, dates, titles, or bullets. Copy bullets faithfully.",
+      "Output only JSON.",
+    ].join("\n"),
+    resumeText.slice(0, 12000),
+    { json: true },
+  );
+  if (!out) return null;
+  try {
+    return JSON.parse(out) as ExtractedProfile;
+  } catch {
+    return null;
+  }
+}
+
 // Draft an answer to an application question, grounded strictly in the profile.
 // Used for essay / "why this company" / short-answer prompts. Returns null if
 // AI is disabled or the call fails, so the UI falls back to manual entry.
@@ -119,6 +193,46 @@ export async function aiDraftAnswer(
       null,
       2,
     )}`,
+  );
+}
+
+// Tailor the candidate's resume to a specific role. Reorders, selects, and
+// rephrases their REAL experience/projects to emphasize what the role needs —
+// it must never invent employers, roles, skills, dates, metrics, or bullets.
+export async function aiTailorResume(
+  job: Job,
+  profile: Profile,
+): Promise<string | null> {
+  const facts = {
+    name: profile.fullName,
+    email: profile.email,
+    phone: profile.phone,
+    location: profile.location,
+    links: [profile.linkedin, profile.github, profile.portfolio].filter(Boolean),
+    education: {
+      university: profile.university,
+      major: profile.major,
+      degree: profile.degree,
+      graduation: profile.graduationDate,
+      gpa: profile.gpa,
+    },
+    skills: profile.skills,
+    experience: profile.experience,
+    projects: profile.projects,
+  };
+  return chat(
+    [
+      "You tailor a resume to a specific role. Output clean Markdown.",
+      "HARD RULES — do not break these:",
+      "- Use ONLY the candidate facts provided. Never add employers, titles, dates, skills, metrics, or bullets that aren't there.",
+      "- You MAY: reorder sections/bullets, choose which experiences/projects to feature, and rephrase existing bullets to surface keywords the role emphasizes.",
+      "- Keep every claim truthful to the source. If a required skill is missing, do NOT claim it.",
+      "Structure: name + contact line, short summary (grounded), Skills, Experience, Projects, Education.",
+      "Keep it to roughly one page. Output only the resume Markdown.",
+    ].join("\n"),
+    `Target role: ${job.title} at ${job.company}\n\nRole description:\n${(
+      job.description ?? ""
+    ).slice(0, 2500)}\n\nCandidate facts (JSON):\n${JSON.stringify(facts, null, 2)}`,
   );
 }
 
