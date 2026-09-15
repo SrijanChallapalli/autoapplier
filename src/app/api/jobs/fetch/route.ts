@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ingestLiveJobs } from "@/lib/service";
+import { withAiCredentials } from "@/lib/aiContext";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,9 +16,11 @@ export async function POST(req: Request) {
   } catch {
     // empty body is fine
   }
-  const summary = await ingestLiveJobs({
-    internOnly: body.internOnly,
-    keywords: body.keywords,
-  });
+  const summary = await withAiCredentials(req, () =>
+    ingestLiveJobs({
+      internOnly: body.internOnly,
+      keywords: body.keywords,
+    }),
+  );
   return NextResponse.json(summary);
 }

@@ -2,11 +2,16 @@
 
 import { useEffect, useState } from "react";
 import type { Ats, CompanyBoard, Settings } from "@/lib/types";
+import { AI_KEY_LS, AI_MODEL_LS } from "@/components/AiKeyBridge";
 
 interface AiStatus {
   enabled: boolean;
   model: string | null;
+  local: boolean;
+  endpoint: string | null;
 }
+
+const DEFAULT_MODEL = "anthropic/claude-sonnet-5";
 
 export default function SettingsPage() {
   const [s, setS] = useState<Settings | null>(null);
@@ -18,15 +23,59 @@ export default function SettingsPage() {
     ats: "greenhouse",
     token: "",
   });
+  const [keyInput, setKeyInput] = useState("");
+  const [modelInput, setModelInput] = useState("");
+  const [hasKey, setHasKey] = useState(false);
+
+  function refreshStatus() {
+    fetch("/api/status")
+      .then((r) => r.json())
+      .then((d) => setAi(d.ai));
+  }
 
   useEffect(() => {
     fetch("/api/settings")
       .then((r) => r.json())
       .then(setS);
-    fetch("/api/status")
-      .then((r) => r.json())
-      .then((d) => setAi(d.ai));
+    refreshStatus();
+    try {
+      setHasKey(Boolean(localStorage.getItem(AI_KEY_LS)));
+      setModelInput(localStorage.getItem(AI_MODEL_LS) ?? "");
+    } catch {
+      // localStorage may be unavailable (private mode); ignore
+    }
   }, []);
+
+  function saveKey() {
+    try {
+      const key = keyInput.trim();
+      if (key) localStorage.setItem(AI_KEY_LS, key);
+      const model = modelInput.trim();
+      if (model) localStorage.setItem(AI_MODEL_LS, model);
+      else localStorage.removeItem(AI_MODEL_LS);
+      setHasKey(Boolean(key) || Boolean(localStorage.getItem(AI_KEY_LS)));
+      setKeyInput("");
+      flash("AI key saved in this browser");
+      // Re-check status through the fetch bridge (which now sends the key).
+      setTimeout(refreshStatus, 50);
+    } catch {
+      flash("Couldn't save the key in this browser");
+    }
+  }
+
+  function clearKey() {
+    try {
+      localStorage.removeItem(AI_KEY_LS);
+      localStorage.removeItem(AI_MODEL_LS);
+    } catch {
+      // ignore
+    }
+    setHasKey(false);
+    setKeyInput("");
+    setModelInput("");
+    flash("AI key removed from this browser");
+    setTimeout(refreshStatus, 50);
+  }
 
   function flash(m: string) {
     setToast(m);
@@ -62,15 +111,78 @@ export default function SettingsPage() {
         {ai?.enabled ? (
           <p style={{ margin: 0 }}>
             <span className="badge high">On</span> Using{" "}
-            <strong>{ai.model}</strong> for match narratives and answer drafting.
+            <strong>{ai.model}</strong>
+            {ai.local && ai.endpoint ? (
+              <>
+                {" "}
+                on your local endpoint <code>{ai.endpoint}</code>
+              </>
+            ) : null}{" "}
+            for resume tailoring, the resume editor chat, cover letters, and
+            answer drafting.
           </p>
         ) : (
           <p style={{ margin: 0 }} className="muted">
             <span className="badge neutral">Off</span> Running the deterministic
-            engine. Add <code>AI_GATEWAY_API_KEY</code> to{" "}
-            <code>.env.local</code> and restart to enable LLM features.
+            engine. Point <code>AI_BASE_URL</code> at a local model, or add your
+            AI Gateway key below.
           </p>
         )}
+
+        {/* Key entry is only relevant when NOT using a keyless local endpoint. */}
+        <div style={{ marginTop: 14 }} hidden={Boolean(ai?.local)}>
+          <div className="field">
+            <label>
+              Your AI Gateway key{" "}
+              {hasKey && (
+                <span className="faint">· a key is saved in this browser</span>
+              )}
+            </label>
+            <input
+              type="password"
+              value={keyInput}
+              placeholder={hasKey ? "•••••••• (saved — enter a new key to replace)" : "vck_… or sk-…"}
+              onChange={(e) => setKeyInput(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <div className="field" style={{ marginTop: 10 }}>
+            <label>Model (optional)</label>
+            <input
+              value={modelInput}
+              placeholder={DEFAULT_MODEL}
+              onChange={(e) => setModelInput(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <div className="row" style={{ gap: 8, marginTop: 12 }}>
+            <button
+              className="btn btn-primary"
+              disabled={!keyInput.trim() && !hasKey}
+              onClick={saveKey}
+            >
+              Save key
+            </button>
+            {hasKey && (
+              <button className="btn" onClick={clearKey}>
+                Remove key
+              </button>
+            )}
+          </div>
+          <p className="muted" style={{ marginTop: 10, marginBottom: 0, fontSize: 13 }}>
+            Your key is stored only in this browser and sent with your own
+            requests — never saved on the server. Get one from the{" "}
+            <a
+              href="https://vercel.com/docs/ai-gateway"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Vercel AI Gateway
+            </a>
+            . A server-side <code>AI_GATEWAY_API_KEY</code> still works as a
+            fallback for local dev.
+          </p>
+        </div>
       </div>
 
       {/* Fetch filters */}

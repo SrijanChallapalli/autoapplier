@@ -32,6 +32,8 @@ import {
   aiChatMessages,
   aiEnabled,
   aiModel,
+  aiEndpoint,
+  aiIsLocal,
   type ChatMessage,
 } from "./ai";
 import { buildNetworkingLinks, type NetworkLink } from "./networking";
@@ -353,6 +355,7 @@ export async function flagsForApplication(
 export async function resumeChatForApplication(
   applicationId: string,
   messages: ChatMessage[],
+  currentResume?: string,
 ): Promise<{ reply?: string; error?: string }> {
   if (!aiEnabled()) {
     return {
@@ -380,16 +383,42 @@ export async function resumeChatForApplication(
     "You are a resume coach helping a student tailor their resume to a specific role and pass ATS screens.",
     "Rules:",
     "- Use ONLY the candidate's real facts (below). NEVER invent employers, roles, skills, dates, metrics, or bullets.",
-    "- Give specific, actionable edits: stronger action verbs, quantified impact (only using real numbers they gave), keyword alignment to the job, ordering, and ATS formatting.",
-    "- Be concise and direct. When the user asks you to rewrite the resume (or a section), output the full updated resume in a fenced ```resume code block so it can be applied; keep prose commentary short and outside the block.",
+    "- Improve with stronger action verbs, quantified impact (only real numbers they gave), keyword alignment to the job, ordering, and ATS-friendly formatting.",
+    "",
+    "OUTPUT FORMAT — follow EXACTLY:",
+    "- If the user asks you to change, rewrite, improve, tailor, shorten, reorder, or edit the resume or ANY part of it (e.g. 'make my bullets stronger'), you MUST return the COMPLETE updated resume — EVERY section from the name line through education — inside ONE fenced block that starts with ```resume and ends with ```.",
+    "- NEVER return only the changed lines or a single section. Always reproduce the whole resume with your edits merged in, so it can replace the current one.",
+    "- Put at most one short sentence of commentary BEFORE the block. Nothing after it.",
+    "- Only when the user asks a pure question that requests NO change (e.g. 'what keywords am I missing?') may you answer in plain prose with no block.",
+    "",
+    "Use this EXACT ATS-safe Markdown structure inside the block (it is rendered to a PDF):",
+    "- '# Full Name' then a contact line of items separated by ' | ' (no icons/labels).",
+    "- Sections as '## Heading' with these names in order: Education, Experience, Projects, Technical Skills (optional '## Summary' first).",
+    "- Entry headers '### Left | Right' — Experience: '### Job Title | Mon YYYY – Mon YYYY' then 'Company | City, State'; Education: '### University | City, State' then 'Degree, Major | Mon YYYY – Mon YYYY'; Projects: '### Name | Tech, Stack'.",
+    "- Bullets start with '- '. Technical Skills as 'Label: a, b, c' lines. No tables, columns, icons, or emojis.",
+    "Example:",
+    "Here's the updated resume:",
+    "```resume",
+    "# Jane Doe",
+    "jane@email.com | (555) 123-4567 | linkedin.com/in/jane | github.com/jane",
+    "",
+    "## Experience",
+    "### Software Engineer Intern | May 2025 – Aug 2025",
+    "Acme Corp | Remote",
+    "- Built X that improved Y by Z%",
+    "",
+    "## Education",
+    "### State University | City, ST",
+    "B.S. in Computer Science | Aug 2023 – May 2027",
+    "```",
     "",
     `TARGET ROLE: ${job?.title ?? app.title} at ${job?.company ?? app.company}`,
     "",
     `JOB DESCRIPTION:\n${(job?.description ?? "").slice(0, 2500)}`,
     "",
     `CANDIDATE FACTS (JSON):\n${JSON.stringify(facts, null, 2)}`,
-    app.tailoredResume
-      ? `\nCURRENT TAILORED RESUME:\n${app.tailoredResume}`
+    (currentResume ?? app.tailoredResume)
+      ? `\nCURRENT TAILORED RESUME:\n${currentResume ?? app.tailoredResume}`
       : "",
   ].join("\n");
 
@@ -401,8 +430,22 @@ export async function resumeChatForApplication(
   return { reply };
 }
 
-export function aiStatus(): { enabled: boolean; model: string | null } {
-  return { enabled: aiEnabled(), model: aiEnabled() ? aiModel() : null };
+export function aiStatus(): {
+  enabled: boolean;
+  model: string | null;
+  local: boolean;
+  endpoint: string | null;
+} {
+  const enabled = aiEnabled();
+  const local = aiIsLocal();
+  return {
+    enabled,
+    model: enabled ? aiModel() : null,
+    local,
+    // Only reveal the endpoint when it's a custom/local one (the default
+    // gateway URL isn't interesting to show).
+    endpoint: local ? aiEndpoint() : null,
+  };
 }
 
 // Prepare applications for the top recommended, eligible jobs that don't yet
