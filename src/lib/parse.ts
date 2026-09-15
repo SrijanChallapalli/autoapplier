@@ -58,10 +58,18 @@ function detectMinYears(text: string): number | undefined {
 }
 
 function detectSalary(text: string): string | undefined {
-  const m = text.match(
-    /\$\s?\d{2,3}(?:,\d{3})?(?:\s?[kK])?(?:\s?[-–—to]+\s?\$?\s?\d{2,3}(?:,\d{3})?(?:\s?[kK])?)?(?:\s?(?:\/|per)\s?(?:year|yr|hour|hr))?/,
+  // A currency-prefixed amount: symbol ($ £ €) or ISO code (USD/GBP/EUR/CAD),
+  // an optional range, an optional k suffix, and an optional per-period tail.
+  // "up to $120k", "$90,000–$120,000/yr", "USD 100k - 130k per year".
+  const amount = String.raw`\d{2,3}(?:,\d{3})?(?:\s?[kK])?`;
+  const re = new RegExp(
+    String.raw`(?:up to\s*)?(?:[$£€]|\b(?:USD|GBP|EUR|CAD|AUD)\b)\s?${amount}` +
+      String.raw`(?:\s?[-–—]+\s?|\s+to\s+)?(?:[$£€]\s?)?(?:${amount})?` +
+      String.raw`(?:\s?(?:\/|per)\s?(?:year|yr|hour|hr|month|mo))?`,
+    "i",
   );
-  return m ? m[0].trim() : undefined;
+  const m = text.match(re);
+  return m ? m[0].replace(/\s+/g, " ").trim() : undefined;
 }
 
 // Try to split a description into required vs nice-to-have sections.
