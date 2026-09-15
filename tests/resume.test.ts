@@ -141,9 +141,9 @@ describe("parseResumeStructured — PDF column layout (tab markers)", () => {
   it("stops at INTERESTS so it isn't parsed as a project", () => {
     expect(p.projects?.length).toBe(1);
     expect(p.projects![0].name).toBe("ChitYap");
-    expect(p.projects!.some((pr) => /Badminton|INTERESTS/i.test(pr.name))).toBe(
-      false,
-    );
+    expect(
+      p.projects!.some((pr) => /Badminton|INTERESTS/i.test(pr.name ?? "")),
+    ).toBe(false);
   });
 });
 
