@@ -25,6 +25,7 @@ const GROUPS: { key: string; label: string; statuses: ApplicationStatus[] }[] = 
 export default function ApplicationsPage() {
   const [apps, setApps] = useState<Application[]>([]);
   const [tab, setTab] = useState("active");
+  const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -41,7 +42,14 @@ export default function ApplicationsPage() {
   }, []);
 
   const group = GROUPS.find((g) => g.key === tab)!;
-  const rows = apps.filter((a) => group.statuses.includes(a.status));
+  const q = query.trim().toLowerCase();
+  const rows = apps
+    .filter((a) => group.statuses.includes(a.status))
+    .filter(
+      (a) =>
+        !q ||
+        `${a.title} ${a.company} ${a.location ?? ""}`.toLowerCase().includes(q),
+    );
 
   function exportCsv() {
     const csv = applicationsToCsv(apps);
@@ -93,11 +101,29 @@ export default function ApplicationsPage() {
         })}
       </div>
 
+      {apps.length > 0 && (
+        <div className="field" style={{ marginBottom: 14 }}>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by title, company, or location…"
+            aria-label="Search applications"
+          />
+        </div>
+      )}
+
       <div className="card">
         {rows.length === 0 ? (
           <div className="empty">
-            Nothing here yet.{" "}
-            <Link href="/jobs">Prepare an application</Link> from a matched job.
+            {q ? (
+              <>No applications match “{query.trim()}”.</>
+            ) : (
+              <>
+                Nothing here yet.{" "}
+                <Link href="/jobs">Prepare an application</Link> from a matched
+                job.
+              </>
+            )}
           </div>
         ) : (
           rows.map((a) => (
