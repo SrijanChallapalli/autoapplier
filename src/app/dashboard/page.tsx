@@ -80,6 +80,33 @@ export default function DashboardPage() {
     .filter((j) => !apps.some((a) => a.jobId === j.id))
     .slice(0, 5);
 
+  const steps = stats
+    ? [
+        {
+          done: stats.profileComplete,
+          label: "Build your profile",
+          hint: "Upload your resume — we read the whole thing (never invents).",
+          href: "/profile",
+          cta: "Go to Profile",
+        },
+        {
+          done: stats.totalJobs > 0,
+          label: "Get some jobs",
+          hint: "Fetch live openings from real ATS boards, or paste a posting.",
+          href: "/jobs",
+          cta: "Go to Jobs",
+        },
+        {
+          done: stats.totalApplications > 0,
+          label: "Prepare your first application",
+          hint: "We auto-fill standard questions and pick your best resume.",
+          href: "/jobs",
+          cta: "Review matches",
+        },
+      ]
+    : [];
+  const onboarded = steps.length > 0 && steps.every((s) => s.done);
+
   return (
     <>
       <h1 className="page-title">Today&apos;s job search</h1>
@@ -88,7 +115,9 @@ export default function DashboardPage() {
         control of every submission.
       </p>
 
-      {stats && <div className="headline">{stats.headline}</div>}
+      {!onboarded && steps.length > 0 && <Onboarding steps={steps} />}
+
+      {stats && onboarded && <div className="headline">{stats.headline}</div>}
 
       {stats && (
         <div className="stats">
@@ -216,6 +245,59 @@ export default function DashboardPage() {
 
       {toast && <div className="toast">{toast}</div>}
     </>
+  );
+}
+
+interface Step {
+  done: boolean;
+  label: string;
+  hint: string;
+  href: string;
+  cta: string;
+}
+
+function Onboarding({ steps }: { steps: Step[] }) {
+  const doneCount = steps.filter((s) => s.done).length;
+  // The first not-yet-done step is the one to nudge.
+  const activeIndex = steps.findIndex((s) => !s.done);
+
+  return (
+    <div className="card onboarding">
+      <div className="row-between" style={{ marginBottom: 4 }}>
+        <div className="section-label" style={{ margin: 0 }}>
+          Getting started
+        </div>
+        <span className="li-meta" style={{ marginTop: 0 }}>
+          {doneCount} of {steps.length} done
+        </span>
+      </div>
+      <p className="faint" style={{ fontSize: 13, marginTop: 0 }}>
+        Three quick steps and your assistant starts finding and preparing
+        applications for you.
+      </p>
+      {steps.map((s, i) => (
+        <div
+          key={s.label}
+          className={`onboard-step ${s.done ? "done" : ""}`}
+        >
+          <span className="onboard-check" aria-hidden="true">
+            {s.done ? "✓" : i + 1}
+          </span>
+          <div style={{ flex: 1 }}>
+            <div className="li-title">{s.label}</div>
+            <div className="li-meta">{s.hint}</div>
+          </div>
+          {!s.done && (
+            <Link
+              className={`btn btn-sm ${i === activeIndex ? "btn-primary" : ""}`}
+              href={s.href}
+            >
+              {s.cta}
+            </Link>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 

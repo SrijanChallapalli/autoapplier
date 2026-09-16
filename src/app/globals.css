@@ -1411,3 +1411,36 @@ ul.clean li {
   color: var(--red);
   background: var(--red-soft);
 }
+
+/* --- Onboarding checklist --- */
+.onboarding {
+  border-color: var(--primary);
+}
+.onboard-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.onboard-step.done {
+  opacity: 0.62;
+}
+.onboard-check {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.onboard-step.done .onboard-check {
+  background: var(--green-soft);
+  color: var(--green);
+  border-color: var(--green);
+}
