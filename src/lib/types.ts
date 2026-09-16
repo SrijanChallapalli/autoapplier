@@ -80,6 +80,11 @@ export interface Profile {
   projects: Project[];
   resumes: ResumeVariant[];
 
+  // The verbatim text of the resume the user last uploaded. This is the base
+  // the resume editor loads and tailors — we keep the original wording and only
+  // edit sections, rather than regenerating from structured fields.
+  resumeText?: string;
+
   // Free-form answers the agent has learned to reuse for standard questions.
   // Keyed by a normalized question, e.g. "why do you want to work here" is NOT
   // stored here (too company-specific); things like "years of experience with

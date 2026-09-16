@@ -329,11 +329,7 @@ export function ResumeEditor({
             </button>
           </div>
           <button className="btn btn-sm" onClick={tailor} disabled={busy}>
-            {tailoring
-              ? "Tailoring…"
-              : resume
-                ? "✨ Regenerate"
-                : "✨ Tailor for this role"}
+            {tailoring ? "Tailoring…" : "✨ Tailor for this role"}
           </button>
           <button
             className="btn btn-sm btn-primary"

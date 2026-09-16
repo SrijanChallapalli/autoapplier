@@ -10,7 +10,7 @@ import type {
 } from "@/lib/types";
 import { StatusBadge, ConfidenceBadge, fmtDate } from "@/components/ui";
 import { buildPacket } from "@/lib/packet";
-import { buildResumeMarkdown } from "@/lib/resumeBuild";
+import { buildResumeMarkdown, resumeTextToMarkdown } from "@/lib/resumeBuild";
 import type { NetworkLink } from "@/lib/networking";
 import { FlagsPanel } from "@/components/FlagsPanel";
 import { ResumeEditor } from "@/components/ResumeEditor";
@@ -462,7 +462,9 @@ export default function ApplicationDetailPage({
             initialResume={
               app.tailoredResume?.trim()
                 ? app.tailoredResume
-                : buildResumeMarkdown(profile)
+                : profile.resumeText?.trim()
+                  ? resumeTextToMarkdown(profile.resumeText)
+                  : buildResumeMarkdown(profile)
             }
             onSave={(text) => {
               setApp((a) => (a ? { ...a, tailoredResume: text } : a));

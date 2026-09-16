@@ -35,6 +35,7 @@ export default function ProfilePage() {
     extracted?: ExtractedProfile | null;
     aiUsed?: boolean;
     preview?: string;
+    text?: string;
   } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [reviewing, setReviewing] = useState(false);
@@ -167,6 +168,12 @@ export default function ProfilePage() {
         bullets: pr.bullets ?? [],
       }));
     next.projects = [...p.projects, ...addedProj];
+
+    // Keep the verbatim resume text so the editor can load the real resume and
+    // tailor sections of it, rather than rebuilding from structured fields.
+    if (resume.text && resume.text.trim()) {
+      next.resumeText = resume.text;
+    }
 
     // If there's no resume variant yet, create one from the uploaded file so
     // resume auto-selection has something to pick.

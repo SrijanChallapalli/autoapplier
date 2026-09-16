@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { buildResumeMarkdown, profileHasResumeContent } from "../src/lib/resumeBuild";
+import {
+  buildResumeMarkdown,
+  profileHasResumeContent,
+  resumeTextToMarkdown,
+} from "../src/lib/resumeBuild";
 import { defaultProfile } from "../src/lib/defaultProfile";
 import type { Profile } from "../src/lib/types";
 
@@ -86,5 +90,54 @@ describe("buildResumeMarkdown", () => {
   it("profileHasResumeContent reflects whether there's anything to render", () => {
     expect(profileHasResumeContent(defaultProfile())).toBe(false);
     expect(profileHasResumeContent(full())).toBe(true);
+  });
+});
+
+describe("resumeTextToMarkdown", () => {
+  const raw = [
+    "Jordan Lee",
+    "jordan@example.com | 555-0100",
+    "",
+    "EDUCATION",
+    "Purdue University, B.S. Computer Science, May 2028",
+    "",
+    "EXPERIENCE",
+    "Software Engineer Intern, Acme (2025)",
+    "• Built a data pipeline in Python",
+    "• Shipped a feature used by 5k users",
+    "",
+    "Technical Skills",
+    "Python, React, TypeScript",
+  ].join("\n");
+
+  it("marks the first line as the name heading", () => {
+    expect(resumeTextToMarkdown(raw)).toMatch(/^# Jordan Lee/);
+  });
+
+  it("turns section titles (ALL-CAPS and known) into ## headings", () => {
+    const md = resumeTextToMarkdown(raw);
+    expect(md).toContain("## EDUCATION");
+    expect(md).toContain("## EXPERIENCE");
+    expect(md).toContain("## Technical Skills"); // known header, not all-caps
+  });
+
+  it("normalizes bullet glyphs to '-' without changing the wording", () => {
+    const md = resumeTextToMarkdown(raw);
+    expect(md).toContain("- Built a data pipeline in Python");
+    expect(md).toContain("- Shipped a feature used by 5k users");
+    expect(md).not.toContain("•");
+  });
+
+  it("preserves ordinary lines verbatim", () => {
+    const md = resumeTextToMarkdown(raw);
+    expect(md).toContain("Purdue University, B.S. Computer Science, May 2028");
+    expect(md).toContain("jordan@example.com | 555-0100");
+    expect(md).toContain("Python, React, TypeScript");
+  });
+
+  it("does not treat a normal all-caps-free sentence as a heading", () => {
+    const md = resumeTextToMarkdown("Jordan Lee\nLed a team of five engineers to ship the product on time.");
+    expect(md).not.toContain("## Led a team");
+    expect(md).toContain("Led a team of five engineers to ship the product on time.");
   });
 });

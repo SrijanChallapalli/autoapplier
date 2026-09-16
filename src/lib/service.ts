@@ -22,6 +22,7 @@ import {
 import { parseJob, type ParseInput } from "./parse";
 import { matchJob, rankJobs } from "./matching";
 import { computeInsights, type Insights } from "./insights";
+import { resumeTextToMarkdown } from "./resumeBuild";
 import { prepareApplication, isDuplicate } from "./prepare";
 import {
   aiRefineJob,
@@ -293,7 +294,18 @@ export async function generateTailoredResume(
   if (!app) return { error: "Application not found" };
   const job = await getJob(app.jobId);
   const profile = await getProfile();
-  if (profile.experience.length === 0 && profile.projects.length === 0) {
+
+  // Prefer editing the candidate's real uploaded resume in place; fall back to
+  // building from structured fields when there's no uploaded resume text.
+  const baseResume = profile.resumeText?.trim()
+    ? resumeTextToMarkdown(profile.resumeText)
+    : app.tailoredResume?.trim() || undefined;
+
+  if (
+    !baseResume &&
+    profile.experience.length === 0 &&
+    profile.projects.length === 0
+  ) {
     return {
       error:
         "Add some experience or projects to your profile first (or upload a resume) — tailoring only rearranges your real content.",
@@ -302,6 +314,7 @@ export async function generateTailoredResume(
   const resume = await aiTailorResume(
     job ?? ({ company: app.company, title: app.title, description: "" } as never),
     profile,
+    baseResume,
   );
   if (!resume) return { error: "The tailoring request failed — try again." };
   await upsertApplication({ ...app, tailoredResume: resume });

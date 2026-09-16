@@ -252,7 +252,28 @@ export async function aiDraftAnswer(
 export async function aiTailorResume(
   job: Job,
   profile: Profile,
+  baseResume?: string,
 ): Promise<string | null> {
+  // Edit-in-place mode: when we have the candidate's actual resume, tailor it by
+  // editing only the sections that help — never rebuild it into a new format.
+  if (baseResume && baseResume.trim()) {
+    return chat(
+      [
+        "You tailor an EXISTING resume to a specific role. Output the full resume as Markdown ONLY.",
+        "HARD RULES — do not break these:",
+        "- Start from the candidate's resume below and PRESERVE it: keep its sections, order, headings, and wording by default.",
+        "- Only CHANGE what genuinely helps for this role: reorder or rephrase existing bullets to surface keywords the role emphasizes, and you may lightly re-order sections.",
+        "- Never add employers, titles, dates, skills, metrics, or bullets that aren't already in the resume. Never invent. If a required skill is missing, do not claim it.",
+        "- Do not reformat the whole document or drop content the role doesn't mention — leave untouched sections exactly as they are.",
+        "- Keep the same Markdown conventions the resume already uses ('#', '##', '-').",
+        "Output ONLY the full tailored resume Markdown, nothing else.",
+      ].join("\n"),
+      `Target role: ${job.title} at ${job.company}\n\nRole description:\n${(
+        job.description ?? ""
+      ).slice(0, 2500)}\n\nThe candidate's current resume (edit this in place):\n\n${baseResume.slice(0, 12000)}`,
+    );
+  }
+
   const facts = {
     name: profile.fullName,
     email: profile.email,
