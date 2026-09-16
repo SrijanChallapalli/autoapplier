@@ -68,12 +68,25 @@ export default function JobDetailPage({
               alignItems: "center",
             }}
           >
-            <div className="row">
+            <div className="row" style={{ flexWrap: "wrap" }}>
               <ConfidenceBadge c={m.confidence} />
               {m.recommended && m.eligible && (
                 <span className="badge primary">Recommended</span>
               )}
               {!m.eligible && <span className="badge low">Not eligible</span>}
+              {!!m.learningDelta && (
+                <span
+                  className={`badge ${m.learningDelta > 0 ? "high" : "medium"}`}
+                  title={
+                    m.learningTags?.length
+                      ? `Adjusted by your past choices on: ${m.learningTags.join(", ")}`
+                      : "Adjusted by your past choices"
+                  }
+                >
+                  {m.learningDelta > 0 ? "↑" : "↓"} {m.learningDelta > 0 ? "+" : ""}
+                  {m.learningDelta} learned
+                </span>
+              )}
             </div>
             <div
               className="score"

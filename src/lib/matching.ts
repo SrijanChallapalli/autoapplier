@@ -72,33 +72,76 @@ function selectResume(
   return best ?? profile.resumes[0];
 }
 
+// Recent choices should count more than old ones — a signal's weight halves
+// every HALF_LIFE_DAYS. This is what makes the learning "adapt": last week's
+// dismissals move the needle more than something you rejected months ago.
+const LEARNING_HALF_LIFE_DAYS = 90;
+// Per-tag and total caps keep one repeated tag (or a long history) from
+// swamping the deterministic base score.
+const LEARNING_TAG_CAP = 4;
+const LEARNING_TOTAL_CAP = 12;
+
+interface LearningResult {
+  delta: number;
+  tags: string[]; // the specific tags driving the nudge, strongest first
+}
+
 function learningAdjustment(
   job: Job,
   signals: PreferenceSignal[],
-): { delta: number; note?: string } {
-  if (signals.length === 0) return { delta: 0 };
-  const jobTags = new Set(
-    extractSkills(`${job.title} ${job.description}`).map(norm),
-  );
-  let delta = 0;
-  for (const sig of signals) {
-    const overlap = sig.tags.filter((t) => jobTags.has(norm(t))).length;
-    if (overlap > 0) delta += sig.weight * Math.min(overlap, 3);
+  now: number,
+): LearningResult {
+  if (signals.length === 0) return { delta: 0, tags: [] };
+
+  // Canonical job tags, keyed by their normalized form for matching but kept in
+  // display form (e.g. "Machine Learning") for the reason text.
+  const canonByNorm = new Map<string, string>();
+  for (const c of extractSkills(`${job.title} ${job.description}`)) {
+    canonByNorm.set(norm(c), c);
   }
-  delta = Math.max(-10, Math.min(10, delta));
-  if (delta === 0) return { delta: 0 };
-  return {
-    delta,
-    note:
-      delta > 0
-        ? "Similar to roles you've approved before"
-        : "Similar to roles you've dismissed before",
-  };
+  if (canonByNorm.size === 0) return { delta: 0, tags: [] };
+
+  // Accumulate a recency-weighted, signed score per overlapping tag.
+  const perTag = new Map<string, number>();
+  for (const sig of signals) {
+    const ageDays = Math.max(0, (now - Date.parse(sig.createdAt)) / 86_400_000);
+    const recency = Math.pow(0.5, ageDays / LEARNING_HALF_LIFE_DAYS);
+    if (!Number.isFinite(recency)) continue;
+    for (const t of sig.tags) {
+      const nt = norm(t);
+      if (!canonByNorm.has(nt)) continue;
+      perTag.set(nt, (perTag.get(nt) ?? 0) + sig.weight * recency);
+    }
+  }
+  if (perTag.size === 0) return { delta: 0, tags: [] };
+
+  let delta = 0;
+  const contributions: { tag: string; w: number }[] = [];
+  for (const [nt, raw] of perTag) {
+    const capped = Math.max(-LEARNING_TAG_CAP, Math.min(LEARNING_TAG_CAP, raw));
+    delta += capped;
+    contributions.push({ tag: canonByNorm.get(nt)!, w: capped });
+  }
+  delta = Math.round(
+    Math.max(-LEARNING_TOTAL_CAP, Math.min(LEARNING_TOTAL_CAP, delta)),
+  );
+  if (delta === 0) return { delta: 0, tags: [] };
+
+  // Name the tags pulling in the same direction as the net delta, strongest first.
+  const tags = contributions
+    .filter((c) => (delta > 0 ? c.w > 0 : c.w < 0))
+    .sort((a, b) => Math.abs(b.w) - Math.abs(a.w))
+    .map((c) => c.tag)
+    .slice(0, 4);
+
+  return { delta, tags };
 }
 
 export interface MatchContext {
   profile: Profile;
   signals?: PreferenceSignal[];
+  // Injectable clock for deterministic recency decay in tests.
+  now?: number;
 }
 
 export function matchJob(job: Job, ctx: MatchContext): MatchResult {
@@ -198,10 +241,15 @@ export function matchJob(job: Job, ctx: MatchContext): MatchResult {
   let score =
     reqCoverage * 50 + interestScore * 25 + locationScore * 15 + (matchedNice.length ? 10 : 0);
 
-  const learn = learningAdjustment(job, signals);
+  const learn = learningAdjustment(job, signals, ctx.now ?? Date.now());
   score += learn.delta;
-  if (learn.note) {
-    (learn.delta > 0 ? reasons : concerns).push(learn.note);
+  if (learn.delta !== 0) {
+    const sign = learn.delta > 0 ? `+${learn.delta}` : `${learn.delta}`;
+    const verb = learn.delta > 0 ? "approved" : "dismissed";
+    const tagList = learn.tags.length ? ` (${learn.tags.join(", ")})` : "";
+    (learn.delta > 0 ? reasons : concerns).push(
+      `${sign} from your history — like roles you've ${verb}${tagList}`,
+    );
   }
 
   score = Math.round(Math.max(0, Math.min(100, score)));
@@ -262,6 +310,8 @@ export function matchJob(job: Job, ctx: MatchContext): MatchResult {
     matchedSkills,
     missingSkills,
     suggestedResumeId: resume?.id,
+    learningDelta: learn.delta,
+    learningTags: learn.tags,
     computedAt: new Date().toISOString(),
   };
 }
