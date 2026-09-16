@@ -430,6 +430,86 @@ export async function resumeChatForApplication(
   return { reply };
 }
 
+// Rewrite a SINGLE resume line/bullet with a focused action and tone, grounded
+// in the candidate's real facts and the target role. Returns just the rewritten
+// line text (no markdown prefix, no commentary) so the UI can splice it back in.
+export type RewriteAction = "strengthen" | "quantify" | "shorten" | "match";
+export type RewriteTone = "concise" | "impact" | "technical" | "leadership";
+
+export async function rewriteResumeLine(
+  applicationId: string,
+  text: string,
+  action: RewriteAction,
+  tone: RewriteTone,
+): Promise<{ text?: string; error?: string }> {
+  if (!aiEnabled()) {
+    return {
+      error:
+        "Per-line rewriting needs an AI Gateway key (AI_GATEWAY_API_KEY) or a local endpoint. Add one to enable it.",
+    };
+  }
+  const clean = text.trim();
+  if (!clean) return { error: "Nothing to rewrite" };
+
+  const app = await getApplication(applicationId);
+  if (!app) return { error: "Application not found" };
+  const job = await getJob(app.jobId);
+  const profile = await getProfile();
+
+  const actionInstruction: Record<RewriteAction, string> = {
+    strengthen:
+      "Rewrite it with a stronger action verb and clearer impact. Do not invent facts.",
+    quantify:
+      "Surface concrete scope or impact. ONLY use numbers the candidate actually provided in their facts; if none apply, sharpen the wording instead of inventing a metric.",
+    shorten:
+      "Tighten it to one crisp line — cut filler, keep the substance and any real metrics.",
+    match:
+      "Rephrase it to echo the language and keywords of the target role WHERE THEY TRUTHFULLY APPLY. Never claim a skill or result the candidate doesn't have.",
+  };
+  const toneInstruction: Record<RewriteTone, string> = {
+    concise: "Voice: concise and plain — short, direct, no fluff.",
+    impact: "Voice: impact-first — lead with the result or outcome.",
+    technical: "Voice: technical and specific — name the real tools/methods used.",
+    leadership:
+      "Voice: ownership and scope — emphasize initiative, collaboration, and leadership that actually happened.",
+  };
+
+  const facts = {
+    skills: profile.skills,
+    experience: profile.experience,
+    projects: profile.projects,
+  };
+  const system = [
+    "You improve a single resume line for a student tailoring their resume to a role.",
+    "Rules:",
+    "- Use ONLY the candidate's real facts (below). NEVER invent employers, skills, dates, metrics, or achievements.",
+    "- Return ONLY the rewritten line as plain text: no markdown, no bullet symbol, no quotes, no preamble.",
+    "- Keep it a single line, similar length unless asked to shorten.",
+    actionInstruction[action],
+    toneInstruction[tone],
+    "",
+    `TARGET ROLE: ${job?.title ?? app.title} at ${job?.company ?? app.company}`,
+    `ROLE KEYWORDS: ${[...(job?.requiredSkills ?? []), ...(job?.niceToHaveSkills ?? [])].join(", ")}`,
+    `CANDIDATE FACTS (JSON):\n${JSON.stringify(facts, null, 2)}`,
+  ].join("\n");
+
+  const reply = await aiChatMessages(
+    [
+      { role: "system", content: system },
+      { role: "user", content: `Line to rewrite:\n${clean}` },
+    ],
+    { temperature: 0.3 },
+  );
+  if (!reply) return { error: "The rewrite request failed — try again." };
+  const out = reply
+    .trim()
+    .replace(/^```[\s\S]*?\n|```$/g, "")
+    .replace(/^\s*[-*•]\s+/, "")
+    .replace(/^["'“”]|["'“”]$/g, "")
+    .trim();
+  return { text: out || clean };
+}
+
 export function aiStatus(): {
   enabled: boolean;
   model: string | null;

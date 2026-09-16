@@ -38,8 +38,74 @@ function inline(raw: string): string {
   return s;
 }
 
+// Public alias so the interactive editor can render inline formatting itself.
+export function renderInline(raw: string): string {
+  return inline(raw);
+}
+
 const BULLET_RE = /^\s*[-*•·]\s+(.*)$/;
 const HR_RE = /^\s*([-*_])\1{2,}\s*$/; // ---, ***, ___
+
+export type LineKind = "h1" | "h2" | "h3" | "h4" | "bullet" | "p" | "hr" | "blank";
+
+export interface ResumeLine {
+  index: number; // source line index in the markdown
+  kind: LineKind;
+  prefix: string; // markdown prefix to preserve on write-back (e.g. "## ", "- ")
+  content: string; // text after the prefix (may contain inline markdown)
+  html: string; // inline-rendered HTML of content
+}
+
+// Parse resume Markdown into one entry per source line, each carrying the exact
+// source index so the interactive editor can edit or AI-rewrite a single line
+// and splice it straight back into the markdown without disturbing the rest.
+export function parseResumeLines(md: string): ResumeLine[] {
+  const lines = (md ?? "").replace(/\r\n?/g, "\n").split("\n");
+  return lines.map((line, index) => {
+    if (line.trim() === "")
+      return { index, kind: "blank", prefix: "", content: "", html: "" };
+    if (HR_RE.test(line))
+      return { index, kind: "hr", prefix: "", content: "", html: "" };
+    const heading = line.match(/^(#{1,4})\s+(.*)$/);
+    if (heading) {
+      const level = Math.min(heading[1].length, 4);
+      const content = heading[2];
+      return {
+        index,
+        kind: (`h${level}`) as LineKind,
+        prefix: "#".repeat(level) + " ",
+        content,
+        html: inline(content),
+      };
+    }
+    const bullet = line.match(BULLET_RE);
+    if (bullet) {
+      return {
+        index,
+        kind: "bullet",
+        prefix: "- ",
+        content: bullet[1],
+        html: inline(bullet[1]),
+      };
+    }
+    const content = line.trim();
+    return { index, kind: "p", prefix: "", content, html: inline(content) };
+  });
+}
+
+// Replace a single source line's content (keeping its markdown prefix) and
+// return the new full markdown. Used by inline edits and per-line AI rewrites.
+export function replaceResumeLine(
+  md: string,
+  index: number,
+  newContent: string,
+  prefix: string,
+): string {
+  const lines = (md ?? "").replace(/\r\n?/g, "\n").split("\n");
+  if (index < 0 || index >= lines.length) return md;
+  lines[index] = prefix + newContent;
+  return lines.join("\n");
+}
 
 // Render resume Markdown to an HTML fragment (the inner body of the page).
 export function renderResumeHtml(md: string): string {
