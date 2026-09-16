@@ -4,7 +4,7 @@ Self-directed tickets toward a production-ready app. Checked = shipped & verifie
 
 ## Correctness & foundation
 - [x] T1  Concurrency-safe data store (serialize read-modify-write; no lost writes)
-- [~] T2  Input validation + error handling on API routes (settings/import/resume/draft done)
+- [x] T2  Input validation + error handling on API routes (profile normalized + all mutating routes tolerate malformed bodies; client pages show retryable error states)
 - [x] T3  Storage seam isolated in store.ts; tmp fallback on read-only FS (Postgres swap = deferred)
 
 ## Intelligence (LLM, opt-in via AI Gateway key)
