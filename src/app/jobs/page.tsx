@@ -168,20 +168,26 @@ export default function JobsPage() {
         </div>
       )}
 
-      <div className="tabs">
+      <div className="tabs" role="tablist" aria-label="Job filter">
         <button
+          role="tab"
+          aria-selected={filter === "matched"}
           className={`tab ${filter === "matched" ? "active" : ""}`}
           onClick={() => setFilter("matched")}
         >
           Matched
         </button>
         <button
+          role="tab"
+          aria-selected={filter === "all"}
           className={`tab ${filter === "all" ? "active" : ""}`}
           onClick={() => setFilter("all")}
         >
           All ({jobs.filter((j) => !j.dismissed).length})
         </button>
         <button
+          role="tab"
+          aria-selected={filter === "dismissed"}
           className={`tab ${filter === "dismissed" ? "active" : ""}`}
           onClick={() => setFilter("dismissed")}
         >
