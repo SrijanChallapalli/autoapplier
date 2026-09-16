@@ -16,7 +16,7 @@ It reduces the repetitive parts of applying (re-typing the same info, re-reading
 6. **Stop and ask** on anything unusual — salary, essay/cover-letter, or legal questions are flagged for you instead of guessed.
 7. **Track everything** — company, title, link, location, date applied, status, resume used, Q&A, recruiter, follow-up date, and interview stages (set each stage's outcome as it happens). Search the tracker and **export it to CSV** for your own spreadsheet or career-services reporting.
 8. **Avoid duplicates** — won't prepare a second application to the same posting, and keeps the best of several similar roles at one company.
-9. **Learn** — approving, dismissing, or interviewing for jobs nudges future scores toward what you actually like.
+9. **Learn (transparently)** — approving, dismissing, or interviewing for jobs nudges future scores toward what you actually like; recent choices count more than old ones, and each nudge is shown on the job as a signed **"↑ +N learned"** badge naming the exact skills that drove it.
 10. **Import from your resume** — upload a PDF/text resume and it extracts your skills to add to the profile (suggestion-only; never invented).
 11. **Draft answers with AI** (optional) — grounded, first-person drafts for essay/"why this company" questions, using only your real facts.
 12. **Export a packet** — one click copies a clean, portal-ready version of an application's answers.
@@ -102,7 +102,7 @@ Companies live in `src/lib/sources/companies.ts` (and are editable at runtime on
 
 ## Deployment (Vercel)
 
-The app is a standard Next.js App Router project and deploys to Vercel as-is. Two things to know:
+The app is a standard Next.js App Router project and deploys to Vercel as-is. **See [DEPLOY.md](DEPLOY.md) for a step-by-step guide** (import → provision Neon → env vars → verify). Two things to know:
 
 - **Cron** — `vercel.json` registers a daily job that hits `/api/cron/fetch` to pull fresh postings. Set a `CRON_SECRET` env var (Vercel sends it as a bearer token) to protect the endpoint.
 - **Persistence** — storage is pluggable (`src/lib/db/backend.ts`). With no `DATABASE_URL` it uses JSON files (great for local dev; ephemeral on Vercel). **Set `DATABASE_URL` to a Postgres/Neon connection string and it persists to Postgres instead** — one JSONB row per collection, created automatically. That's the switch to flip for a real deployment; provision Neon from the Vercel Marketplace and add the env var. The Postgres adapter is covered by tests (run against in-process PGlite).
