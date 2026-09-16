@@ -36,6 +36,7 @@ import {
   aiIsLocal,
   type ChatMessage,
 } from "./ai";
+import { buildResumeFromProfile, profileHasResumeContent } from "./resumeBuild";
 import { buildNetworkingLinks, type NetworkLink } from "./networking";
 import { countryAllowed } from "./geo";
 import { analyzeFlags, type FlagReport } from "./flags";
@@ -278,31 +279,37 @@ export async function generateCoverLetter(
   return { coverLetter: letter };
 }
 
-// Generate a tailored resume for an application and persist it.
+// Generate a tailored resume for an application and persist it. With an AI key
+// the model rephrases/orders the candidate's real content; WITHOUT one we fall
+// back to a deterministic build from the profile (same real content, ordered by
+// relevance to the role) so the resume is always the candidate's own — never a
+// blank editor or leftover sample.
 export async function generateTailoredResume(
   applicationId: string,
 ): Promise<{ tailoredResume?: string; error?: string }> {
-  if (!aiEnabled()) {
-    return {
-      error:
-        "Resume tailoring needs an AI Gateway key (AI_GATEWAY_API_KEY). Add one to enable.",
-    };
-  }
   const app = await getApplication(applicationId);
   if (!app) return { error: "Application not found" };
   const job = await getJob(app.jobId);
   const profile = await getProfile();
-  if (profile.experience.length === 0 && profile.projects.length === 0) {
+  if (!profileHasResumeContent(profile)) {
     return {
       error:
-        "Add some experience or projects to your profile first (or upload a resume) — tailoring only rearranges your real content.",
+        "Your profile is empty — upload your resume or add your experience/skills on the Profile page first. Tailoring only ever uses your real content.",
     };
   }
-  const resume = await aiTailorResume(
-    job ?? ({ company: app.company, title: app.title, description: "" } as never),
-    profile,
-  );
-  if (!resume) return { error: "The tailoring request failed — try again." };
+
+  let resume: string | null = null;
+  if (aiEnabled()) {
+    resume = await aiTailorResume(
+      job ?? ({ company: app.company, title: app.title, description: "" } as never),
+      profile,
+    );
+  }
+  // No key, or the AI call failed — build deterministically from the profile.
+  if (!resume) {
+    resume = buildResumeFromProfile(profile, job ?? undefined);
+  }
+  if (!resume) return { error: "Couldn't build a resume from your profile." };
   await upsertApplication({ ...app, tailoredResume: resume });
   return { tailoredResume: resume };
 }
