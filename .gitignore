@@ -12,7 +12,9 @@ next-env.d.ts
 /build
 
 # local data store (personal info — never commit)
-/data/*.json
+# Ignore everything under data/ (json plus atomic-write *.tmp files) except the
+# .gitkeep placeholder that keeps the directory in the repo.
+/data/*
 !/data/.gitkeep
 
 # env
