@@ -5,7 +5,7 @@ import type {
   Profile,
   Settings,
 } from "./types";
-import { defaultProfile } from "./defaultProfile";
+import { defaultProfile, normalizeProfile } from "./defaultProfile";
 import { DEFAULT_COMPANIES } from "./sources/companies";
 import { getBackend } from "./db/backend";
 
@@ -74,7 +74,9 @@ export async function getProfile(): Promise<Profile> {
 }
 
 export async function saveProfile(profile: Profile): Promise<Profile> {
-  const next = { ...profile, updatedAt: new Date().toISOString() };
+  // Normalize defensively so a malformed profile (bad PUT body, stale file,
+  // LLM output) can never corrupt the store or crash the matcher downstream.
+  const next = { ...normalizeProfile(profile), updatedAt: new Date().toISOString() };
   await withLock(KEYS.profile, () => write(KEYS.profile, next));
   return next;
 }
