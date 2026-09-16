@@ -19,16 +19,27 @@ import { parseResumeDoc, type ResumeDoc } from "./resumeParse";
 
 const PAGE_W = 612; // US Letter, points
 const PAGE_H = 792;
-const MARGIN = 36; // 0.5"
-const RIGHT = PAGE_W - MARGIN; // 576
-const CONTENT_W = PAGE_W - MARGIN * 2; // 540
+const MARGIN = 42; // ~0.58" (spec: 0.55–0.65")
+const RIGHT = PAGE_W - MARGIN;
+const CONTENT_W = PAGE_W - MARGIN * 2;
 const BULLET_INDENT = 12; // glyph offset from margin
 const BULLET_TEXT = 24; // text offset from margin
 
-const FONT = "times";
+// Typography (Jake's Resume, ATS-safe):
+//   name 18pt bold · section headings 11.5pt bold caps · body 10.5pt ·
+//   line spacing 1.0 · 4pt between entries.
+const FONT = "times"; // jsPDF's built-in Times New Roman
+const BODY = 10.5;
+const LEAD = 12.5; // single (1.0) line spacing for 10.5pt Times
+
+// ATS: replace unusual dash characters (en/em/figure dash, minus) with a plain
+// hyphen so the text layer copies cleanly and parsers don't choke.
+function ascii(s: string): string {
+  return (s ?? "").replace(/[‐-―−]/g, "-");
+}
 
 export function renderResume(doc: jsPDF, markdown: string): void {
-  const r = parseResumeDoc(markdown);
+  const r = parseResumeDoc(ascii(markdown));
   let y = MARGIN + 4;
 
   const space = (h: number) => {
@@ -38,24 +49,24 @@ export function renderResume(doc: jsPDF, markdown: string): void {
     }
   };
 
-  // ---- Name (centered, bold) ----
+  // ---- Name (centered, bold, 18pt) ----
   if (r.name) {
     doc.setFont(FONT, "bold");
-    doc.setFontSize(22);
+    doc.setFontSize(18);
     doc.setTextColor(0);
-    space(24);
+    space(22);
     doc.text(r.name, PAGE_W / 2, y, { align: "center" });
-    y += 16;
+    y += 15;
   }
 
-  // ---- Contact line (centered) ----
+  // ---- Contact line (centered, plain text URLs) ----
   if (r.contact.length) {
     doc.setFont(FONT, "normal");
-    doc.setFontSize(10);
+    doc.setFontSize(9.5);
     doc.setTextColor(30);
     space(12);
     doc.text(r.contact.join("   |   "), PAGE_W / 2, y, { align: "center" });
-    y += 14;
+    y += 13;
     doc.setTextColor(0);
   }
 
@@ -68,7 +79,7 @@ export function renderResume(doc: jsPDF, markdown: string): void {
     leftStyle: "bold" | "italic" | "normal",
   ) => {
     doc.setFontSize(size);
-    space(size * 1.3);
+    space(size * 1.25);
     doc.setFont(FONT, leftStyle);
     // Keep the left text from colliding with the right text.
     const rightW = right ? doc.getTextWidth(right) : 0;
@@ -79,7 +90,7 @@ export function renderResume(doc: jsPDF, markdown: string): void {
       doc.setFont(FONT, "normal"); // dates/location: plain, right-aligned
       doc.text(right, RIGHT, y, { align: "right" });
     }
-    y += size * 1.3;
+    y += size * 1.25;
   };
 
   for (const section of r.sections) {
@@ -95,10 +106,10 @@ export function renderResume(doc: jsPDF, markdown: string): void {
     doc.line(MARGIN, y, RIGHT, y);
     y += 11;
 
-    // ---- Free lines (skills / summary) ----
+    // ---- Free lines (skills / summary) — 10.5pt ----
     for (const line of section.lines) {
-      doc.setFontSize(10);
-      space(13);
+      doc.setFontSize(BODY);
+      space(LEAD);
       if (line.label) {
         doc.setFont(FONT, "bold");
         doc.text(line.label, MARGIN, y);
@@ -106,40 +117,40 @@ export function renderResume(doc: jsPDF, markdown: string): void {
         doc.setFont(FONT, "normal");
         const wrapped = doc.splitTextToSize(line.text, CONTENT_W - labelW);
         doc.text(wrapped[0] ?? "", MARGIN + labelW, y);
-        y += 13;
+        y += LEAD;
         for (let k = 1; k < wrapped.length; k++) {
-          space(13);
+          space(LEAD);
           doc.text(wrapped[k], MARGIN, y);
-          y += 13;
+          y += LEAD;
         }
       } else {
         doc.setFont(FONT, "normal");
         const wrapped = doc.splitTextToSize(line.text, CONTENT_W);
         for (const w of wrapped) {
-          space(13);
+          space(LEAD);
           doc.text(w, MARGIN, y);
-          y += 13;
+          y += LEAD;
         }
       }
     }
 
-    // ---- Entries ----
+    // ---- Entries: bold 10.5pt title / plain date, italic 10.5pt subtitle ----
     for (const entry of section.entries) {
-      if (section.entries.indexOf(entry) > 0 || section.lines.length) y += 3;
-      twoCol(entry.title, entry.titleRight, 11, "bold");
+      if (section.entries.indexOf(entry) > 0 || section.lines.length) y += 4;
+      twoCol(entry.title, entry.titleRight, BODY, "bold");
       if (entry.subtitle) {
-        twoCol(entry.subtitle, entry.subtitleRight, 10, "italic");
+        twoCol(entry.subtitle, entry.subtitleRight, BODY, "italic");
       }
-      // Bullets — real "•" character, hanging indent.
+      // Bullets — real round "•" character, hanging indent, 10.5pt.
       doc.setFont(FONT, "normal");
-      doc.setFontSize(10);
+      doc.setFontSize(BODY);
       for (const b of entry.bullets) {
         const wrapped = doc.splitTextToSize(b, CONTENT_W - BULLET_TEXT);
         wrapped.forEach((w: string, idx: number) => {
-          space(12);
+          space(LEAD);
           if (idx === 0) doc.text("•", MARGIN + BULLET_INDENT, y);
           doc.text(w, MARGIN + BULLET_TEXT, y);
-          y += 12;
+          y += LEAD;
         });
       }
     }
