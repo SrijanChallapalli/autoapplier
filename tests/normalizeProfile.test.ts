@@ -69,6 +69,56 @@ describe("normalizeProfile", () => {
     expect(normalizeProfile({ preferences: { minSalary: NaN } }).preferences.minSalary).toBeUndefined();
   });
 
+  it("preserves a fully-populated valid profile without dropping data", () => {
+    const p = {
+      ...defaultProfile(),
+      fullName: "Jordan Lee",
+      email: "jordan@example.com",
+      phone: "555-0100",
+      university: "State U",
+      major: "CS",
+      gpa: "3.8",
+      authorization: {
+        workAuthorization: "US Citizen",
+        requiresSponsorshipNow: false,
+        requiresSponsorshipFuture: true,
+      },
+      preferences: {
+        roles: ["SWE Intern"],
+        interests: ["ML"],
+        locations: ["Remote", "NYC"],
+        countries: ["United States"],
+        willingToRelocate: false,
+        minSalary: 90000,
+        excludeKeywords: ["clearance"],
+        seniority: "new-grad" as const,
+      },
+      skills: ["Python", "TypeScript"],
+      experience: [
+        {
+          id: "e1",
+          company: "Acme",
+          title: "Intern",
+          location: "Remote",
+          startDate: "2024-06",
+          endDate: "2024-08",
+          bullets: ["Built X", "Shipped Y"],
+          tags: ["backend"],
+        },
+      ],
+      projects: [
+        { id: "p1", name: "Thing", description: "A thing", link: "http://x", bullets: ["Did Z"], tags: ["ml"] },
+      ],
+      resumes: [
+        { id: "r1", label: "Backend", fileName: "backend.pdf", focus: ["python"], notes: "n" },
+      ],
+      savedAnswers: { "years of python": "3" },
+    };
+    const out = normalizeProfile(p);
+    // updatedAt is intentionally re-derived; everything else must survive.
+    expect({ ...out, updatedAt: p.updatedAt }).toEqual(p);
+  });
+
   it("produces a profile the matcher can score without crashing", () => {
     // The whole point: a malformed profile must not crash downstream matching.
     const p = normalizeProfile({ skills: "not-an-array", experience: "broken" });
