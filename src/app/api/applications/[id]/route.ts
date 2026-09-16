@@ -33,7 +33,20 @@ export async function PATCH(
   const patch = (await req.json()) as Partial<Application>;
   const next: Application = { ...app, ...patch, id: app.id, jobId: app.jobId };
 
-  if (patch.status === "submitted" && !next.dateApplied) {
+  // Reaching any submitted-or-later stage means the application went out —
+  // stamp the applied date if we don't have one yet, even when the user jumps
+  // straight to "screening"/"interviewing" without clicking "Mark as submitted".
+  const APPLIED_STATUSES = [
+    "submitted",
+    "screening",
+    "interviewing",
+    "offer",
+  ];
+  if (
+    patch.status &&
+    APPLIED_STATUSES.includes(patch.status) &&
+    !next.dateApplied
+  ) {
     next.dateApplied = new Date().toISOString();
   }
   if (patch.status === "interviewing") {
