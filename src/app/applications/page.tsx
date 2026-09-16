@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Application, ApplicationStatus } from "@/lib/types";
-import { StatusBadge, ConfidenceBadge, fmtDate } from "@/components/ui";
+import { StatusBadge, ConfidenceBadge, fmtDate, ErrorState } from "@/components/ui";
 import { relativeDay } from "@/lib/format";
 import { applicationsToCsv } from "@/lib/exportCsv";
+import { getJson } from "@/lib/http";
 
 const GROUPS: { key: string; label: string; statuses: ApplicationStatus[] }[] = [
   {
@@ -24,11 +25,19 @@ const GROUPS: { key: string; label: string; statuses: ApplicationStatus[] }[] = 
 export default function ApplicationsPage() {
   const [apps, setApps] = useState<Application[]>([]);
   const [tab, setTab] = useState("active");
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    setError(null);
+    try {
+      setApps(await getJson<Application[]>("/api/applications"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't load applications.");
+    }
+  }
 
   useEffect(() => {
-    fetch("/api/applications")
-      .then((r) => r.json())
-      .then(setApps);
+    load();
   }, []);
 
   const group = GROUPS.find((g) => g.key === tab)!;
@@ -64,6 +73,8 @@ export default function ApplicationsPage() {
           </button>
         )}
       </div>
+
+      {error && <ErrorState message={error} onRetry={load} />}
 
       <div className="tabs">
         {GROUPS.map((g) => {

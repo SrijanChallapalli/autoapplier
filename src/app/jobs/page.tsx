@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Job } from "@/lib/types";
 import { ConfidenceBadge, scoreColor } from "@/components/ui";
+import { getJson } from "@/lib/http";
 
 type Filter = "matched" | "all" | "dismissed";
 
@@ -19,8 +20,11 @@ export default function JobsPage() {
   const [showImport, setShowImport] = useState(false);
 
   async function load() {
-    const j = await fetch("/api/jobs").then((r) => r.json());
-    setJobs(j);
+    try {
+      setJobs(await getJson<Job[]>("/api/jobs"));
+    } catch (e) {
+      flash(e instanceof Error ? e.message : "Couldn't load jobs.");
+    }
   }
   useEffect(() => {
     load();

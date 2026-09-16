@@ -1,5 +1,25 @@
 import type { Confidence, ApplicationStatus } from "@/lib/types";
 
+/** Inline error state with a retry button, for pages whose data fetch failed. */
+export function ErrorState({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className="card error-state" role="alert">
+      <div>{message}</div>
+      {onRetry && (
+        <button className="btn btn-sm" onClick={onRetry}>
+          Retry
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function ConfidenceBadge({ c }: { c: Confidence }) {
   const label = { high: "High", medium: "Medium", low: "Low" }[c];
   return <span className={`badge ${c}`}>{label} confidence</span>;
