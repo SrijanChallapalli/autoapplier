@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 }
 
 async function handleImport(req: Request) {
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const text: string = (body.text ?? "").toString();
   const url: string | undefined = body.url?.toString().trim() || undefined;
 

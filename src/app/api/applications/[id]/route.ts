@@ -30,7 +30,7 @@ export async function PATCH(
   const app = await getApplication(id);
   if (!app) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const patch = (await req.json()) as Partial<Application>;
+  const patch = (await req.json().catch(() => ({}))) as Partial<Application>;
   const next: Application = { ...app, ...patch, id: app.id, jobId: app.jobId };
 
   // Reaching any submitted-or-later stage means the application went out —

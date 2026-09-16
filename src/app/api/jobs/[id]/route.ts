@@ -24,7 +24,7 @@ export async function PATCH(
   const job = await getJob(id);
   if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   if (typeof body.dismissed === "boolean") {
     job.dismissed = body.dismissed;
     job.dismissReason = body.dismissReason ?? job.dismissReason;

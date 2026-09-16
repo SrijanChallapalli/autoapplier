@@ -12,7 +12,7 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
-  const body = (await req.json()) as Partial<Settings>;
+  const body = (await req.json().catch(() => ({}))) as Partial<Settings>;
 
   // Validate the company list so a bad entry can't break fetching.
   const companies: CompanyBoard[] = Array.isArray(body.companies)
