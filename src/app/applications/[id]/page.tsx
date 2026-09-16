@@ -390,9 +390,38 @@ export default function ApplicationDetailPage({
             <div>
               <div className="li-title">{st.name}</div>
               <div className="li-meta">
-                {st.date ? fmtDate(st.date) : "No date"} ·{" "}
-                {st.outcome ?? "pending"}
+                {st.date ? fmtDate(st.date) : "No date"}
               </div>
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <select
+                aria-label={`Outcome for ${st.name}`}
+                value={st.outcome ?? "pending"}
+                style={{ width: "auto", padding: "5px 8px" }}
+                onChange={(e) => {
+                  const next = app.interviewStages.map((s, j) =>
+                    j === i
+                      ? { ...s, outcome: e.target.value as InterviewStage["outcome"] }
+                      : s,
+                  );
+                  patch({ interviewStages: next }, "Stage updated");
+                }}
+              >
+                <option value="pending">Pending</option>
+                <option value="passed">Passed</option>
+                <option value="failed">Failed</option>
+              </select>
+              <button
+                className="btn btn-sm btn-danger"
+                aria-label={`Remove ${st.name}`}
+                title="Remove stage"
+                onClick={() => {
+                  const next = app.interviewStages.filter((_, j) => j !== i);
+                  patch({ interviewStages: next }, "Stage removed");
+                }}
+              >
+                ✕
+              </button>
             </div>
           </div>
         ))}
