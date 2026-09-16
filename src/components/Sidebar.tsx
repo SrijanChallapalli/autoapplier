@@ -58,8 +58,11 @@ export function Sidebar() {
               key={l.href}
               href={l.href}
               className={active ? "active" : ""}
+              aria-current={active ? "page" : undefined}
             >
-              <span className="nav-ico">{l.icon}</span>
+              <span className="nav-ico" aria-hidden="true">
+                {l.icon}
+              </span>
               {l.label}
             </Link>
           );

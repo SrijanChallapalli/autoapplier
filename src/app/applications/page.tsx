@@ -84,7 +84,7 @@ export default function ApplicationsPage() {
 
       {error && <ErrorState message={error} onRetry={load} />}
 
-      <div className="tabs">
+      <div className="tabs" role="tablist" aria-label="Application status">
         {GROUPS.map((g) => {
           const count = apps.filter((a) =>
             g.statuses.includes(a.status),
@@ -92,6 +92,8 @@ export default function ApplicationsPage() {
           return (
             <button
               key={g.key}
+              role="tab"
+              aria-selected={tab === g.key}
               className={`tab ${tab === g.key ? "active" : ""}`}
               onClick={() => setTab(g.key)}
             >
