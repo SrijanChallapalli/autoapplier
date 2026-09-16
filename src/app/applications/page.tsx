@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Application, ApplicationStatus } from "@/lib/types";
 import { StatusBadge, ConfidenceBadge, fmtDate } from "@/components/ui";
 import { relativeDay } from "@/lib/format";
+import { applicationsToCsv } from "@/lib/exportCsv";
 
 const GROUPS: { key: string; label: string; statuses: ApplicationStatus[] }[] = [
   {
@@ -33,12 +34,36 @@ export default function ApplicationsPage() {
   const group = GROUPS.find((g) => g.key === tab)!;
   const rows = apps.filter((a) => group.statuses.includes(a.status));
 
+  function exportCsv() {
+    const csv = applicationsToCsv(apps);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `autoapplier-applications-${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <>
-      <h1 className="page-title">Applications</h1>
-      <p className="page-sub">
-        Every application the assistant has prepared — tracked end to end.
-      </p>
+      <div className="row-between">
+        <div>
+          <h1 className="page-title">Applications</h1>
+          <p className="page-sub">
+            Every application the assistant has prepared — tracked end to end.
+          </p>
+        </div>
+        {apps.length > 0 && (
+          <button className="btn btn-sm" onClick={exportCsv}>
+            ↓ Export CSV
+          </button>
+        )}
+      </div>
 
       <div className="tabs">
         {GROUPS.map((g) => {
