@@ -14,7 +14,7 @@ It reduces the repetitive parts of applying (re-typing the same info, re-reading
 4. **Filter out** roles you're not eligible for (clearance, too senior, too much experience, excluded keywords) — they sink with a clear reason.
 5. **Prepare applications** for good matches: auto-fills every standard question from your profile, auto-selects the best resume variant, and builds a pre-submission summary.
 6. **Stop and ask** on anything unusual — salary, essay/cover-letter, or legal questions are flagged for you instead of guessed.
-7. **Track everything** — company, title, link, location, date applied, status, resume used, Q&A, recruiter, follow-up date, and interview stages.
+7. **Track everything** — company, title, link, location, date applied, status, resume used, Q&A, recruiter, follow-up date, and interview stages (set each stage's outcome as it happens). Search the tracker and **export it to CSV** for your own spreadsheet or career-services reporting.
 8. **Avoid duplicates** — won't prepare a second application to the same posting, and keeps the best of several similar roles at one company.
 9. **Learn** — approving, dismissing, or interviewing for jobs nudges future scores toward what you actually like.
 10. **Import from your resume** — upload a PDF/text resume and it extracts your skills to add to the profile (suggestion-only; never invented).
