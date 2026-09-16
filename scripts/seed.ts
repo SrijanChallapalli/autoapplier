@@ -1,8 +1,15 @@
 /**
- * Seeds a richer demo profile and a batch of sample job postings so the
- * dashboard shows the full "N found, M matched, ..." experience immediately.
+ * Seeds sample job postings so you can explore the UI immediately.
  *
- * Run with:  npm run seed
+ * By DEFAULT the profile is left BLANK — this is a real first-run: build your
+ * profile (or upload your resume) to get real matches. A blank profile means
+ * resume autofill fills a clean slate instead of colliding with demo data.
+ *
+ * Pass --demo (or SEED_DEMO=1) to also seed a fictional "Alex Demo" profile and
+ * a few prepared applications, for a fully-populated showcase.
+ *
+ * Run with:  npm run seed          (sample jobs only, blank profile)
+ *            npm run seed -- --demo (full demo profile + applications)
  * Safe to re-run; it overwrites profile/jobs/applications in ./data.
  */
 import { saveProfile, saveJobs, upsertApplication, newId } from "../src/lib/store";
@@ -174,9 +181,16 @@ Nice to have: Next.js, Tailwind CSS`,
 ];
 
 async function main() {
-  const profile = demoProfile();
+  const demo = process.argv.includes("--demo") || process.env.SEED_DEMO === "1";
+
+  // The real profile we persist: blank by default so resume autofill starts
+  // clean, or the fictional demo candidate when --demo is passed.
+  const profile = demo ? demoProfile() : defaultProfile();
   await saveProfile(profile);
 
+  // Match the sample jobs against whatever profile we saved, so the scores you
+  // see always reflect the profile in the app (0 matches while blank — that's
+  // honest; they recompute the moment you build your profile).
   const jobs: Job[] = SAMPLES.map((s) => {
     const job = parseJob({ text: s.text, url: s.url, company: s.company, title: s.title });
     job.match = matchJob(job, { profile });
@@ -184,18 +198,25 @@ async function main() {
   });
   await saveJobs(jobs);
 
-  // Prepare applications for the top eligible/recommended jobs.
-  const prepared = jobs
-    .filter((j) => j.match?.recommended && j.match?.eligible)
-    .slice(0, 5);
-  for (const job of prepared) {
-    const app = prepareApplication(job, profile);
-    await upsertApplication(app);
+  // Only pre-prepare applications in demo mode; a real first-run has none.
+  let preparedCount = 0;
+  if (demo) {
+    const prepared = jobs
+      .filter((j) => j.match?.recommended && j.match?.eligible)
+      .slice(0, 5);
+    for (const job of prepared) {
+      await upsertApplication(prepareApplication(job, profile));
+    }
+    preparedCount = prepared.length;
   }
 
   const matched = jobs.filter((j) => j.match?.recommended && j.match?.eligible).length;
-  console.log(`Seeded profile for ${profile.fullName}.`);
-  console.log(`Seeded ${jobs.length} jobs; ${matched} matched; prepared ${prepared.length} applications.`);
+  if (demo) {
+    console.log(`Seeded demo profile for ${profile.fullName}.`);
+  } else {
+    console.log("Seeded a blank profile — build it or upload your resume on the Profile page.");
+  }
+  console.log(`Seeded ${jobs.length} sample jobs; ${matched} matched; prepared ${preparedCount} applications.`);
 }
 
 main().catch((e) => {
