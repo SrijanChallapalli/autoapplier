@@ -1401,3 +1401,13 @@ ul.clean li {
   font-weight: 700;
   color: var(--text-muted);
 }
+
+.error-state {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--red-soft);
+}

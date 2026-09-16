@@ -5,8 +5,9 @@ import Link from "next/link";
 import type { Application, Job } from "@/lib/types";
 import type { DashboardStats } from "@/lib/service";
 import type { Insights } from "@/lib/insights";
-import { ConfidenceBadge, StatusBadge, scoreColor } from "@/components/ui";
+import { ConfidenceBadge, StatusBadge, scoreColor, ErrorState } from "@/components/ui";
 import { relativeDay } from "@/lib/format";
+import { getJson } from "@/lib/http";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -14,21 +15,29 @@ export default function DashboardPage() {
   const [apps, setApps] = useState<Application[]>([]);
   const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   async function load() {
-    const [s, j, a, i] = await Promise.all([
-      fetch("/api/dashboard").then((r) => r.json()),
-      fetch("/api/jobs").then((r) => r.json()),
-      fetch("/api/applications").then((r) => r.json()),
-      fetch("/api/insights").then((r) => r.json()),
-    ]);
-    setStats(s);
-    setJobs(j);
-    setApps(a);
-    setInsights(i);
-    setLoading(false);
+    setLoading(true);
+    setError(null);
+    try {
+      const [s, j, a, i] = await Promise.all([
+        getJson<DashboardStats>("/api/dashboard"),
+        getJson<Job[]>("/api/jobs"),
+        getJson<Application[]>("/api/applications"),
+        getJson<Insights>("/api/insights"),
+      ]);
+      setStats(s);
+      setJobs(j);
+      setApps(a);
+      setInsights(i);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't load your pipeline.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -54,6 +63,13 @@ export default function DashboardPage() {
   }
 
   if (loading) return <p className="muted">Loading your pipeline…</p>;
+  if (error)
+    return (
+      <>
+        <h1 className="page-title">Today&apos;s job search</h1>
+        <ErrorState message={error} onRetry={load} />
+      </>
+    );
 
   const needsAttention = apps.filter(
     (a) => a.status === "needs_input" || a.status === "needs_review",
