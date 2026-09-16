@@ -136,6 +136,10 @@ export interface MatchResult {
   matchedSkills: string[];
   missingSkills: string[];
   suggestedResumeId?: ID;
+  // How much the user's past approve/dismiss history nudged this score, and the
+  // specific tags that drove it. 0 / empty when there's no learned signal.
+  learningDelta?: number;
+  learningTags?: string[];
   computedAt: string;
 }
 
