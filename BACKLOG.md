@@ -45,8 +45,21 @@ Self-directed tickets toward a production-ready app. Checked = shipped & verifie
 - [x] T26 Insights page — application funnel, response/interview/offer rates,
       skill-gap analysis over matched jobs, follow-ups & interviews due this
       week, weekly activity, top companies (pure `insights.ts` + tests)
+- [x] T27 Applications CSV export + tracker search; editable interview stage
+      outcomes; dashboard "This week"; graceful error/retry states; profile
+      normalization + malformed-body tolerance on all mutating routes (T2);
+      accessibility (aria-current/tab roles); unsaved-changes guard
+
+## Round 5
+- [x] T28 Matching quality — recency-decayed learning signals (recent choices
+      weigh more), per-tag contribution surfaced as a signed `learningDelta` +
+      named `learningTags` in the match and a visible badge on the job page
+- [x] T29 Onboarding — dashboard "Getting started" checklist for new users
+      (profile → jobs → first application), auto-hides once complete
+- [x] T30 Deploy readiness — DEPLOY.md (Neon via Vercel Marketplace), health
+      route already reports live storage backend + DB reachability
 
 ## Deferred (needs your input)
-- Neon provisioning + Vercel deploy (needs your Vercel login) — code is ready;
-  just set DATABASE_URL + deploy
+- Run the Neon provisioning + Vercel deploy (needs your Vercel login) — code and
+  DEPLOY.md are ready; provision Neon, set env vars, deploy
 - Real form submission (needs approach decision; safety limits apply)
