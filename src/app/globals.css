@@ -553,66 +553,70 @@ ul.clean li {
 }
 
 /* The rendered resume "page" — always looks like white paper, both themes. */
+/* Jake's Resume look, on paper: Times, single column, hairline section rules.
+   Sizes mirror the PDF spec (name 18pt · headings 11.5pt caps · body 10.5pt),
+   scaled to the on-screen page width. */
 .resume-page {
   background: #ffffff;
-  color: #111827;
+  color: #000000;
   max-width: 640px;
   margin: 0 auto;
   padding: 40px 44px;
   border-radius: 4px;
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12), 0 6px 20px rgba(16, 24, 40, 0.1);
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: "Times New Roman", Times, Georgia, serif;
   font-size: 13.5px;
-  line-height: 1.45;
+  line-height: 1.25;
 }
 .resume-page h1 {
-  font-size: 26px;
+  font-size: 23px; /* 18pt name */
   font-weight: 700;
   text-align: center;
   margin: 0 0 3px;
   letter-spacing: 0.01em;
-  color: #111827;
+  color: #000000;
 }
 .resume-page h1 + p {
   text-align: center;
-  color: #4b5563;
-  font-size: 12.5px;
-  margin: 0 0 14px;
+  color: #1f2937;
+  font-size: 12px;
+  margin: 0 0 12px;
 }
 .resume-page h2 {
-  font-size: 13px;
+  font-size: 14px; /* 11.5pt section heading */
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #111827;
-  border-bottom: 1px solid #9ca3af;
-  padding-bottom: 3px;
-  margin: 18px 0 8px;
+  letter-spacing: 0.04em;
+  color: #000000;
+  border-bottom: 1px solid #000000;
+  padding-bottom: 2px;
+  margin: 13px 0 5px;
 }
 .resume-page h3 {
-  font-size: 14.5px;
+  font-size: 13.5px; /* 10.5pt bold company/project name */
   font-weight: 700;
-  margin: 11px 0 2px;
-  color: #111827;
+  margin: 7px 0 1px;
+  color: #000000;
 }
 .resume-page h4 {
-  font-size: 13.5px;
-  font-weight: 600;
-  margin: 8px 0 2px;
-  color: #1f2937;
+  font-size: 13.5px; /* 10.5pt job title */
+  font-weight: 400;
+  font-style: italic;
+  margin: 4px 0 1px;
+  color: #000000;
 }
 .resume-page p {
-  margin: 0 0 7px;
+  margin: 0 0 5px;
 }
 .resume-page ul {
-  margin: 4px 0 10px;
-  padding-left: 20px;
+  margin: 2px 0 6px;
+  padding-left: 18px;
 }
 .resume-page li {
-  margin: 0 0 4px;
+  margin: 0 0 2.5px;
 }
 .resume-page a {
-  color: #1d4ed8;
+  color: #000000; /* URLs as normal text (ATS-safe) */
   text-decoration: none;
 }
 .resume-page hr {
