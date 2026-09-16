@@ -38,6 +38,7 @@ export default function ProfilePage() {
   } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     fetch("/api/profile")
@@ -45,8 +46,21 @@ export default function ProfilePage() {
       .then(setP);
   }, []);
 
+  // Warn before leaving (tab close / refresh) with unsaved profile edits — a
+  // half-filled profile is easy to lose and it drives every job match.
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
   function set<K extends keyof Profile>(key: K, value: Profile[K]) {
     setP((prev) => (prev ? { ...prev, [key]: value } : prev));
+    setDirty(true);
   }
 
   async function persist(profile: Profile): Promise<Profile> {
@@ -63,6 +77,7 @@ export default function ProfilePage() {
     setBusy(true);
     const saved = await persist(p);
     setP(saved);
+    setDirty(false);
     setBusy(false);
     flash("Profile saved — all job matches recomputed");
   }
@@ -175,6 +190,7 @@ export default function ProfilePage() {
     setBusy(true);
     const saved = await persist(merged);
     setP(saved);
+    setDirty(false);
     setBusy(false);
     setReviewing(false);
     setResume(null);
@@ -202,9 +218,23 @@ export default function ProfilePage() {
             question. It only ever rephrases what you enter — never invents.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={save} disabled={busy}>
-          {busy ? "Saving…" : "Save profile"}
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {dirty && !busy && (
+            <span
+              className="li-meta"
+              style={{ color: "var(--amber)", marginTop: 0 }}
+            >
+              ● Unsaved changes
+            </span>
+          )}
+          <button
+            className="btn btn-primary"
+            onClick={save}
+            disabled={busy || !dirty}
+          >
+            {busy ? "Saving…" : dirty ? "Save profile" : "Saved"}
+          </button>
+        </div>
       </div>
 
       {isEmptyProfile && !reviewing && (
