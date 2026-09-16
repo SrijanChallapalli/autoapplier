@@ -21,6 +21,7 @@ import {
 } from "./store";
 import { parseJob, type ParseInput } from "./parse";
 import { matchJob, rankJobs } from "./matching";
+import { computeInsights, type Insights } from "./insights";
 import { prepareApplication, isDuplicate } from "./prepare";
 import {
   aiRefineJob,
@@ -529,6 +530,15 @@ export async function dashboardStats(): Promise<DashboardStats> {
     submitted,
     headline,
   };
+}
+
+export async function getInsights(): Promise<Insights> {
+  const [apps, jobs, profile] = await Promise.all([
+    listApplications(),
+    listJobs(),
+    getProfile(),
+  ]);
+  return computeInsights(apps, jobs, profile);
 }
 
 // --- Learning loop ----------------------------------------------------------

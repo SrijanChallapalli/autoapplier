@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/dashboard", label: "Dashboard", icon: "◎" },
   { href: "/jobs", label: "Jobs", icon: "≡" },
   { href: "/applications", label: "Applications", icon: "✓" },
+  { href: "/insights", label: "Insights", icon: "▨" },
   { href: "/profile", label: "Profile", icon: "◑" },
   { href: "/settings", label: "Settings", icon: "⚙" },
 ];
