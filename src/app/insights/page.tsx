@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Insights } from "@/lib/insights";
+import { relativeDay } from "@/lib/format";
 
 export default function InsightsPage() {
   const [data, setData] = useState<Insights | null>(null);
@@ -77,7 +78,7 @@ export default function InsightsPage() {
                   className="li-meta"
                   style={{ color: f.overdue ? "var(--red)" : "var(--amber)" }}
                 >
-                  Follow up {whenLabel(f.daysAway)}
+                  Follow up {relativeDay(f.dueDate)}
                 </div>
               </div>
               <span className={`badge ${f.overdue ? "low" : "medium"}`}>
@@ -94,7 +95,7 @@ export default function InsightsPage() {
                   </Link>
                 </div>
                 <div className="li-meta">
-                  {s.title} · {whenLabel(s.daysAway)}
+                  {s.title} · {relativeDay(s.date)}
                 </div>
               </div>
               <span className="badge primary">Interview</span>
@@ -229,9 +230,3 @@ function Activity({ activity }: { activity: Insights["activity"] }) {
   );
 }
 
-function whenLabel(daysAway: number): string {
-  if (daysAway === 0) return "today";
-  if (daysAway === 1) return "tomorrow";
-  if (daysAway === -1) return "yesterday";
-  return daysAway > 0 ? `in ${daysAway} days` : `${-daysAway} days ago`;
-}
