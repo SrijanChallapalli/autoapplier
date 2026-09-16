@@ -1,22 +1,38 @@
 // ---------------------------------------------------------------------------
-// Deterministic profile -> resume (Jake's layout, ATS-safe Markdown). This runs
-// with NO AI key: it assembles the candidate's REAL profile into a one-page
-// resume in the exact section order the PDF renderer expects. When a job is
-// given, it only *reorders* skills (role-relevant first) and features the most
-// relevant experience/projects first — it never invents or rephrases content.
+// Deterministic profile -> resume in the Jake's-template Markdown the PDF parser
+// expects (two-column entries: "### Left | Right" then "Left | Right"). Runs
+// with NO AI key. It only assembles/orders the candidate's REAL profile — never
+// invents. A job, when given, orders skills and entries by role relevance.
+//
+// Canonical output:
+//   # Name
+//   email | phone | linkedin.com/in/x | github.com/x
+//
+//   ## Education
+//   ### University | City, ST
+//   Degree, Major | Grad date
+//
+//   ## Skills
+//   Languages: ...
+//   Frameworks: ...
+//
+//   ## Experience
+//   ### Company | Location
+//   Title | Start - End
+//   - bullet
+//
+//   ## Projects
+//   ### Project | Tech
+//   - bullet
 // ---------------------------------------------------------------------------
 
 import type { Job, Profile, Project, WorkExperience } from "./types";
 
-// Turn "2024-06" into "Jun 2024"; leave free-text ("Present", "2028") as-is.
 function fmtDate(d?: string): string {
   if (!d) return "";
   const m = d.match(/^(\d{4})-(\d{2})$/);
-  if (!m) return d;
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
+  if (!m) return d; // already free text ("May 2026", "Present", "2028")
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const mi = parseInt(m[2], 10) - 1;
   return months[mi] ? `${months[mi]} ${m[1]}` : m[1];
 }
@@ -28,109 +44,147 @@ function dateRange(start?: string, end?: string): string {
   return e || s || "";
 }
 
-// Contact line: plain text, " · " separated, URLs stripped of the scheme so
-// they read as normal text (linkedin.com/in/...), ATS-safe.
-function contactLine(p: Profile): string {
-  const url = (u?: string) => (u ? u.replace(/^https?:\/\//i, "").replace(/\/$/, "") : "");
-  return [p.email, p.phone, p.location, url(p.linkedin), url(p.github), url(p.portfolio)]
-    .filter(Boolean)
-    .join(" · ");
+function stripScheme(u?: string): string {
+  return u ? u.replace(/^https?:\/\//i, "").replace(/\/$/, "") : "";
 }
 
-// Score how relevant an entry is to the job (by keyword hits in its text), so
-// the most role-relevant real experience/projects lead. Purely for ordering.
+// Pipe-separated contact line (matches the parser + the template).
+function contactLine(p: Profile): string {
+  return [
+    p.email,
+    p.phone,
+    stripScheme(p.linkedin),
+    stripScheme(p.github),
+    stripScheme(p.portfolio),
+    p.authorization?.workAuthorization?.trim(),
+  ]
+    .filter(Boolean)
+    .join(" | ");
+}
+
 function relevance(text: string, keywords: string[]): number {
   const t = text.toLowerCase();
   return keywords.reduce((n, k) => (k && t.includes(k.toLowerCase()) ? n + 1 : n), 0);
 }
+const expText = (e: WorkExperience) => `${e.title} ${e.company} ${e.bullets.join(" ")}`;
+const projText = (p: Project) => `${p.name} ${p.description} ${(p.tags ?? []).join(" ")} ${p.bullets.join(" ")}`;
 
-function expText(e: WorkExperience): string {
-  return `${e.title} ${e.company} ${e.bullets.join(" ")}`;
+// --- Skill categorization (flat profile list -> template's labeled rows) -----
+const CATEGORIES: { label: string; match: RegExp }[] = [
+  {
+    label: "Languages",
+    match: /^(python|java|javascript|typescript|typescript\/javascript|c\+\+|c#|c|go|golang|rust|swift|kotlin|ruby|php|scala|r|sql|html|css|bash|shell|matlab|dart)$/i,
+  },
+  {
+    label: "Frameworks",
+    match: /^(react|react native|next\.?js|node\.?js|express|fastapi|flask|django|spring|springboot|vue|angular|svelte|swiftui|\.net|rails|tailwind|redux)$/i,
+  },
+  {
+    label: "Data & ML",
+    match: /^(machine learning|deep learning|reinforcement learning|nlp|pytorch|tensorflow|keras|scikit-learn|sklearn|pandas|numpy|xgboost|llms?|foundation models|supabase|postgresql|postgres|mysql|mongodb|redis|spark|hadoop|llamaparse|opencv|apple vision|healthkit)$/i,
+  },
+  {
+    label: "Tools & Testing",
+    match: /^(git|github|gitlab|linux|docker|kubernetes|k8s|aws|gcp|azure|vercel|n8n|vitest|jest|pytest|criterion|ci\/cd|figma|jira|apns|tokio)$/i,
+  },
+];
+
+function categorizeSkills(skills: string[]): { label: string; items: string[] }[] {
+  const buckets = CATEGORIES.map((c) => ({ label: c.label, items: [] as string[] }));
+  const other: string[] = [];
+  for (const s of skills) {
+    const idx = CATEGORIES.findIndex((c) => c.match.test(s.trim()));
+    if (idx >= 0) buckets[idx].items.push(s);
+    else other.push(s);
+  }
+  if (other.length) buckets.push({ label: "Other", items: other });
+  return buckets.filter((b) => b.items.length);
 }
-function projText(p: Project): string {
-  return `${p.name} ${p.description} ${p.bullets.join(" ")}`;
+
+// A "project" whose name is really a stray section header or a run-on paragraph
+// (an upload-parse artifact) — skip it so it doesn't pollute the resume.
+function looksLikeStrayProject(p: Project): boolean {
+  const n = p.name.trim();
+  if (n.length > 60 && p.bullets.length === 0) return true;
+  if (/^(additional|interests|hobbies|awards|activities|references|leadership)\b/i.test(n))
+    return true;
+  return false;
 }
 
 export function buildResumeFromProfile(profile: Profile, job?: Job): string {
-  const keywords = job
-    ? [...(job.requiredSkills ?? []), ...(job.niceToHaveSkills ?? [])]
-    : [];
-
-  const lines: string[] = [];
+  const keywords = job ? [...(job.requiredSkills ?? []), ...(job.niceToHaveSkills ?? [])] : [];
+  const out: string[] = [];
 
   // ---- Header ----
-  if (profile.fullName) lines.push(`# ${profile.fullName}`);
+  if (profile.fullName) out.push(`# ${profile.fullName}`);
   const contact = contactLine(profile);
-  if (contact) lines.push(contact);
+  if (contact) out.push(contact);
 
-  // ---- Education ----
+  // ---- Education (## / ### University | Location  +  Degree | Grad) ----
   if (profile.university || profile.major) {
-    lines.push("", "## Education");
-    const uniRight = [profile.location].filter(Boolean).join("");
-    lines.push(
-      `### ${profile.university}${uniRight ? ` — ${uniRight}` : ""}`.trimEnd(),
+    out.push("", "## Education");
+    out.push(
+      `### ${profile.university || "University"}${profile.location ? ` | ${profile.location}` : ""}`,
     );
-    const degree = [profile.degree, profile.major].filter(Boolean).join(" ").trim();
-    const gradBits = [
-      degree,
-      profile.gpa ? `GPA: ${profile.gpa}` : "",
-      fmtDate(profile.graduationDate),
-    ].filter(Boolean);
-    if (gradBits.length) lines.push(gradBits.join(" — "));
+    const degree =
+      profile.degree && !profile.major.toLowerCase().includes(profile.degree.toLowerCase())
+        ? `${profile.degree} ${profile.major}`.trim()
+        : profile.major;
+    const grad = fmtDate(profile.graduationDate);
+    const gpa = profile.gpa ? `GPA: ${profile.gpa}` : "";
+    const leftBits = [degree, gpa].filter(Boolean).join(" — ");
+    if (leftBits || grad) out.push(`${leftBits}${grad ? ` | ${grad}` : ""}`.trim());
   }
 
-  // ---- Skills (role-relevant first when a job is given) ----
+  // ---- Skills (categorized "Label: a, b, c" rows) ----
   if (profile.skills.length) {
-    const skills = job
-      ? [...profile.skills].sort(
-          (a, b) =>
-            relevance(b, keywords) - relevance(a, keywords) ||
-            profile.skills.indexOf(a) - profile.skills.indexOf(b),
-        )
+    out.push("", "## Skills");
+    const ordered = job
+      ? [...profile.skills].sort((a, b) => relevance(b, keywords) - relevance(a, keywords) || profile.skills.indexOf(a) - profile.skills.indexOf(b))
       : profile.skills;
-    lines.push("", "## Skills", `- ${skills.join(", ")}`);
+    const cats = categorizeSkills(ordered);
+    if (cats.length > 1) {
+      for (const c of cats) out.push(`${c.label}: ${c.items.join(", ")}`);
+    } else {
+      out.push(`Skills: ${ordered.join(", ")}`);
+    }
   }
 
-  // ---- Experience (most role-relevant real roles first) ----
+  // ---- Experience (### Company | Location / Title | Dates / bullets) ----
   if (profile.experience.length) {
     const exp = job
-      ? [...profile.experience].sort(
-          (a, b) => relevance(expText(b), keywords) - relevance(expText(a), keywords),
-        )
+      ? [...profile.experience].sort((a, b) => relevance(expText(b), keywords) - relevance(expText(a), keywords))
       : profile.experience;
-    lines.push("", "## Experience");
+    out.push("", "## Experience");
     for (const e of exp) {
+      out.push(`### ${e.company || e.title}${e.location ? ` | ${e.location}` : ""}`);
       const range = dateRange(e.startDate, e.endDate);
-      const title = [e.title, e.company].filter(Boolean).join(" — ");
-      lines.push(`### ${title}${range ? ` (${range})` : ""}`);
-      for (const b of e.bullets) if (b.trim()) lines.push(`- ${b.trim()}`);
+      const titleLine = e.company ? e.title : ""; // if no company, title was the header
+      if (titleLine || range) out.push(`${titleLine}${range ? ` | ${range}` : ""}`.trim());
+      for (const b of e.bullets) if (b.trim()) out.push(`- ${b.trim()}`);
     }
   }
 
-  // ---- Projects ----
-  if (profile.projects.length) {
+  // ---- Projects (### Name | Tech / bullets) ----
+  const projects = profile.projects.filter((p) => p.name && !looksLikeStrayProject(p));
+  if (projects.length) {
     const projs = job
-      ? [...profile.projects].sort(
-          (a, b) => relevance(projText(b), keywords) - relevance(projText(a), keywords),
-        )
-      : profile.projects;
-    lines.push("", "## Projects");
+      ? [...projects].sort((a, b) => relevance(projText(b), keywords) - relevance(projText(a), keywords))
+      : projects;
+    out.push("", "## Projects");
     for (const pr of projs) {
-      const head = pr.description ? `${pr.name} — ${pr.description}` : pr.name;
-      lines.push(`### ${head}`);
-      for (const b of pr.bullets) if (b.trim()) lines.push(`- ${b.trim()}`);
+      const tech = (pr.tags ?? []).join(", ");
+      out.push(`### ${pr.name}${tech ? ` | ${tech}` : ""}`);
+      if (!tech && pr.description) out.push(pr.description);
+      for (const b of pr.bullets) if (b.trim()) out.push(`- ${b.trim()}`);
     }
   }
 
-  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-// Does the profile have enough real content to build a resume?
 export function profileHasResumeContent(profile: Profile): boolean {
   return Boolean(
-    profile.fullName ||
-      profile.experience.length ||
-      profile.projects.length ||
-      profile.skills.length,
+    profile.fullName || profile.experience.length || profile.projects.length || profile.skills.length,
   );
 }

@@ -8,7 +8,7 @@ import {
   type Hunk,
 } from "@/lib/resumeDiff";
 import { downloadResumePdf, resumeFileName } from "@/lib/resumePdf";
-import { parseResumeLines, replaceResumeLine, type ResumeLine } from "@/lib/markdown";
+import { parseResumeLines, replaceResumeLine, renderInline, type ResumeLine } from "@/lib/markdown";
 
 type Mode = "auto" | "review";
 type View = "edit" | "split" | "preview";
@@ -775,6 +775,20 @@ function LineNode({
   const canRewrite = as === "li" || as === "p" || as === "h3" || as === "h4";
   const Tag = as as ElementType;
 
+  // Two-column entry line: "Left | Right" (company/location, title/dates,
+  // project/tech) renders left-aligned + right-aligned like Jake's template.
+  // Only a SINGLE " | " qualifies — the multi-pipe contact line stays centered.
+  const twoCol =
+    (as === "h3" || as === "h4" || as === "p") &&
+    line.content.split(" | ").length === 2;
+  let leftHtml = "";
+  let rightHtml = "";
+  if (twoCol) {
+    const bar = line.content.lastIndexOf(" | ");
+    leftHtml = renderInline(line.content.slice(0, bar));
+    rightHtml = renderInline(line.content.slice(bar + 3));
+  }
+
   function startEdit() {
     setDraft(line.content);
     setEditing(true);
@@ -813,6 +827,11 @@ function LineNode({
             }
           }}
         />
+      ) : twoCol ? (
+        <span className="rline-text rl-two" title="Click to edit" onClick={startEdit}>
+          <span className="rl-left" dangerouslySetInnerHTML={{ __html: leftHtml }} />
+          <span className="rl-right" dangerouslySetInnerHTML={{ __html: rightHtml }} />
+        </span>
       ) : (
         <span
           className="rline-text"
