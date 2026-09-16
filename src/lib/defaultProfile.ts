@@ -178,6 +178,8 @@ export function normalizeProfile(input: unknown): Profile {
     projects: Array.isArray(input.projects) ? input.projects.map(normProject) : [],
     resumes: Array.isArray(input.resumes) ? input.resumes.map(normResume) : [],
 
+    resumeText: optStr(input.resumeText),
+
     savedAnswers,
 
     updatedAt: str(input.updatedAt, base.updatedAt),

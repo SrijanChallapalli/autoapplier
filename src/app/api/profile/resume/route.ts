@@ -67,6 +67,7 @@ async function handleResumeUpload(req: Request) {
       portfolio: parsed.portfolio,
       chars: parsed.chars,
       preview: parsed.text.slice(0, 1500),
+      text: parsed.text, // full verbatim resume text — stored as the editor's base
       extracted, // full structured profile (always present)
       aiUsed: Boolean(ai),
     });
