@@ -6,9 +6,11 @@ import type {
   Application,
   ApplicationStatus,
   InterviewStage,
+  Profile,
 } from "@/lib/types";
 import { StatusBadge, ConfidenceBadge, fmtDate } from "@/components/ui";
 import { buildPacket } from "@/lib/packet";
+import { buildResumeMarkdown } from "@/lib/resumeBuild";
 import type { NetworkLink } from "@/lib/networking";
 import { FlagsPanel } from "@/components/FlagsPanel";
 import { ResumeEditor } from "@/components/ResumeEditor";
@@ -33,6 +35,7 @@ export default function ApplicationDetailPage({
 }) {
   const { id } = use(params);
   const [app, setApp] = useState<Application | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,6 +43,16 @@ export default function ApplicationDetailPage({
       .then((r) => r.json())
       .then(setApp);
   }, [id]);
+
+  // The resume editor falls back to a resume built from the profile when this
+  // application has no tailored resume yet — so the preview shows your real
+  // resume immediately, no AI key required.
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((r) => r.json())
+      .then(setProfile)
+      .catch(() => {});
+  }, []);
 
   function flash(msg: string) {
     setToast(msg);
@@ -440,18 +453,26 @@ export default function ApplicationDetailPage({
 
       {/* --- Resume editor (tailored resume + chat + PDF) --- */}
       <div className="card">
-        <ResumeEditor
-          appId={app.id}
-          company={app.company}
-          title={app.title}
-          resumeLabel={app.resumeLabel}
-          initialResume={app.tailoredResume ?? ""}
-          onSave={(text) => {
-            setApp((a) => (a ? { ...a, tailoredResume: text } : a));
-            patch({ tailoredResume: text });
-          }}
-          onFlash={flash}
-        />
+        {profile ? (
+          <ResumeEditor
+            appId={app.id}
+            company={app.company}
+            title={app.title}
+            resumeLabel={app.resumeLabel}
+            initialResume={
+              app.tailoredResume?.trim()
+                ? app.tailoredResume
+                : buildResumeMarkdown(profile)
+            }
+            onSave={(text) => {
+              setApp((a) => (a ? { ...a, tailoredResume: text } : a));
+              patch({ tailoredResume: text });
+            }}
+            onFlash={flash}
+          />
+        ) : (
+          <p className="muted">Loading resume…</p>
+        )}
       </div>
 
       {/* --- Networking --- */}
