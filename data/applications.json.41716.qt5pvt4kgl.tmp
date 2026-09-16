@@ -1,0 +1,438 @@
+[
+  {
+    "id": "app_mu3a23yghy7tlb",
+    "jobId": "job_mu3a23y9gzyf9y",
+    "company": "Cloudbase",
+    "title": "Frontend Engineer Intern",
+    "location": "Remote",
+    "jobUrl": "https://cloudbase.com/jobs/fe-intern",
+    "status": "needs_review",
+    "confidence": "medium",
+    "answers": [
+      {
+        "question": "Full name",
+        "answer": "Alex Demo",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Email",
+        "answer": "alex@example.com",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Current location",
+        "answer": "Austin, TX",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "LinkedIn",
+        "answer": "https://linkedin.com/in/example",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "GitHub",
+        "answer": "https://github.com/example",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "University / school",
+        "answer": "State University",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Major / field of study",
+        "answer": "Computer Science",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Expected graduation",
+        "answer": "2027-05",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "GPA",
+        "answer": "3.8",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Do you now or will you require sponsorship?",
+        "answer": "No",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Are you willing to relocate?",
+        "answer": "Yes",
+        "source": "profile",
+        "unusual": false
+      }
+    ],
+    "openQuestions": [],
+    "matchSummary": "63/100 fit for a internship candidate. Remote, which you prefer; Matches 3/4 required skills: TypeScript, React, REST; Has nice-to-haves: Next.js, JavaScript. Watch: Missing skills mentioned: HTML.",
+    "keyRequirements": [
+      "Required skills: TypeScript, React, REST, HTML"
+    ],
+    "interviewStages": [],
+    "createdAt": "2026-09-15T23:02:53.320Z",
+    "updatedAt": "2026-09-15T23:59:25.140Z",
+    "tailoredResume": "**### text**# Alex Demo\nalex@example.com · (555) 010-2020 · Austin, TX · [github.com/alexdemo](https://github.com/alexdemo)\n\n## Summary\nFrontend-focused engineer who ships **accessible, fast React UIs** and enjoys turning messy requirements into clean interfaces.\n\n## Skills\n- TypeScript, React, Next.js, CSS\n- Node.js, Playwright, Vite\n\n## Experience\n### Frontend Engineer Intern — Brightloop (May 2024 – Aug 2024)\n- Rebuilt the onboarding flow in React, lifting activation by 18%\n- Cut bundle size 32% by code-splitting and trimming dependencies\n\n### Teaching Assistant — UT Austin (2023 – 2024)\n- Led weekly labs on data structures for 40+ students\n\n## Projects\n### Resume Studio\n- A visual Markdown resume editor with live PDF export\n\n## Education\n**University of Texas at Austin** — BS Computer Science, 2025"
+  },
+  {
+    "id": "app_mu3a23yf2a1zqh",
+    "jobId": "job_mu3a23y9qzph19",
+    "company": "BrightPath",
+    "title": "AI Engineer Intern",
+    "location": "Remote",
+    "jobUrl": "https://brightpath.com/ai-intern",
+    "status": "needs_review",
+    "confidence": "medium",
+    "answers": [
+      {
+        "question": "Full name",
+        "answer": "Alex Demo",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Email",
+        "answer": "alex@example.com",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Current location",
+        "answer": "Austin, TX",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "LinkedIn",
+        "answer": "https://linkedin.com/in/example",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "GitHub",
+        "answer": "https://github.com/example",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "University / school",
+        "answer": "State University",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Major / field of study",
+        "answer": "Computer Science",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Expected graduation",
+        "answer": "2027-05",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "GPA",
+        "answer": "3.8",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Do you now or will you require sponsorship?",
+        "answer": "No",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Are you willing to relocate?",
+        "answer": "Yes",
+        "source": "profile",
+        "unusual": false
+      }
+    ],
+    "openQuestions": [],
+    "matchSummary": "65/100 fit for a internship candidate. Remote, which you prefer; Matches 7/7 required skills: JavaScript, TypeScript, Python, React, LLMs, Machine Learning.",
+    "keyRequirements": [
+      "Required skills: JavaScript, TypeScript, Python, React, LLMs, Machine Learning, AI"
+    ],
+    "interviewStages": [],
+    "createdAt": "2026-09-15T23:02:53.319Z",
+    "updatedAt": "2026-09-15T23:02:53.320Z"
+  },
+  {
+    "id": "app_mu3a23yexe115e",
+    "jobId": "job_mu3a23y800d3e0",
+    "company": "DataForge",
+    "title": "Data Science Intern",
+    "location": "Remote",
+    "jobUrl": "https://dataforge.io/careers/ds-intern",
+    "status": "needs_review",
+    "confidence": "medium",
+    "answers": [
+      {
+        "question": "Full name",
+        "answer": "Alex Demo",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Email",
+        "answer": "alex@example.com",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Current location",
+        "answer": "Austin, TX",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "LinkedIn",
+        "answer": "https://linkedin.com/in/example",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "GitHub",
+        "answer": "https://github.com/example",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "University / school",
+        "answer": "State University",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Major / field of study",
+        "answer": "Computer Science",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Expected graduation",
+        "answer": "2027-05",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "GPA",
+        "answer": "3.8",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Do you now or will you require sponsorship?",
+        "answer": "No",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Are you willing to relocate?",
+        "answer": "Yes",
+        "source": "profile",
+        "unusual": false
+      }
+    ],
+    "openQuestions": [
+      "(salary/compensation) What are your salary expectations?"
+    ],
+    "matchSummary": "65/100 fit for a internship candidate. Remote, which you prefer; Matches 5/5 required skills: Machine Learning, Data Science, Python, pandas, SQL.",
+    "keyRequirements": [
+      "Required skills: Machine Learning, Data Science, Python, pandas, SQL"
+    ],
+    "interviewStages": [],
+    "createdAt": "2026-09-15T23:02:53.318Z",
+    "updatedAt": "2026-09-15T23:02:53.319Z"
+  },
+  {
+    "id": "app_mu3a23yd1968h3",
+    "jobId": "job_mu3a23y8le9523",
+    "company": "Orbital Systems",
+    "title": "Software Engineer Intern",
+    "location": "Austin, TX",
+    "jobUrl": "https://orbital.dev/jobs/swe-intern",
+    "status": "needs_review",
+    "confidence": "medium",
+    "answers": [
+      {
+        "question": "Full name",
+        "answer": "Alex Demo",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Email",
+        "answer": "alex@example.com",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Current location",
+        "answer": "Austin, TX",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "LinkedIn",
+        "answer": "https://linkedin.com/in/example",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "GitHub",
+        "answer": "https://github.com/example",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "University / school",
+        "answer": "State University",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Major / field of study",
+        "answer": "Computer Science",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Expected graduation",
+        "answer": "2027-05",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "GPA",
+        "answer": "3.8",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Do you now or will you require sponsorship?",
+        "answer": "No",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Are you willing to relocate?",
+        "answer": "Yes",
+        "source": "profile",
+        "unusual": false
+      }
+    ],
+    "openQuestions": [
+      "(salary/compensation) Compensation: $40/hour"
+    ],
+    "matchSummary": "71/100 fit for a internship candidate. Matches 6/6 required skills: JavaScript, TypeScript, Node.js, React, SQL, Git; Has nice-to-haves: Docker, CI/CD.",
+    "keyRequirements": [
+      "Required skills: JavaScript, TypeScript, Node.js, React, SQL, Git",
+      "Compensation: $40/hour"
+    ],
+    "interviewStages": [],
+    "createdAt": "2026-09-15T23:02:53.317Z",
+    "updatedAt": "2026-09-15T23:02:53.317Z"
+  },
+  {
+    "id": "app_mu3a23ybgpj8vd",
+    "jobId": "job_mu3a23y5thzb7m",
+    "company": "Nimbus AI",
+    "title": "Machine Learning Engineering Intern",
+    "location": "Remote",
+    "jobUrl": "https://nimbus.ai/careers/ml-intern",
+    "status": "ready",
+    "confidence": "high",
+    "answers": [
+      {
+        "question": "Full name",
+        "answer": "Alex Demo",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Email",
+        "answer": "alex@example.com",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Current location",
+        "answer": "Austin, TX",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "LinkedIn",
+        "answer": "https://linkedin.com/in/example",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "GitHub",
+        "answer": "https://github.com/example",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "University / school",
+        "answer": "State University",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Major / field of study",
+        "answer": "Computer Science",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Expected graduation",
+        "answer": "2027-05",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "GPA",
+        "answer": "3.8",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Do you now or will you require sponsorship?",
+        "answer": "No",
+        "source": "profile",
+        "unusual": false
+      },
+      {
+        "question": "Are you willing to relocate?",
+        "answer": "Yes",
+        "source": "profile",
+        "unusual": false
+      }
+    ],
+    "openQuestions": [],
+    "matchSummary": "75/100 fit for a internship candidate. Remote, which you prefer; Matches 7/7 required skills: Machine Learning, scikit-learn, PyTorch, Python, pandas, NumPy; Has nice-to-haves: Docker, LLMs, AWS.",
+    "keyRequirements": [
+      "Required skills: Machine Learning, scikit-learn, PyTorch, Python, pandas, NumPy, AI"
+    ],
+    "interviewStages": [],
+    "createdAt": "2026-09-15T23:02:53.315Z",
+    "updatedAt": "2026-09-15T23:02:53.316Z"
+  }
+]

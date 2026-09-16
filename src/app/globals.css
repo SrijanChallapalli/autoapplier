@@ -627,6 +627,193 @@ ul.clean li {
   min-height: 200px;
 }
 
+/* --- Auto/Review segmented toggle --- */
+.mode-seg {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.mode-seg button {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  border-radius: 0;
+  padding: 5px 12px;
+  font-size: 13px;
+}
+.mode-seg button.on {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* --- Tone preset selector --- */
+.tone-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.tone-select span {
+  white-space: nowrap;
+}
+.tone-select select {
+  width: auto;
+  padding: 5px 8px;
+  font-size: 12.5px;
+}
+
+/* --- Live ATS keyword + fit-score panel --- */
+.ats-panel {
+  display: flex;
+  gap: 14px;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: var(--surface-2);
+}
+.ats-score {
+  flex-shrink: 0;
+  width: 78px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  padding: 6px;
+}
+.ats-score.s-high {
+  background: var(--green);
+}
+.ats-score.s-mid {
+  background: var(--amber);
+}
+.ats-score.s-low {
+  background: var(--red);
+}
+.ats-score-num {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+}
+.ats-score-cap {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+  margin-top: 3px;
+}
+.ats-keys {
+  min-width: 0;
+  flex: 1;
+}
+.ats-keys-head {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.ats-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ats-chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.ats-chip.hit {
+  background: var(--green-soft);
+  color: var(--green);
+}
+.ats-chip.miss {
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+}
+.ats-chip.nice {
+  font-weight: 500;
+  opacity: 0.92;
+}
+
+/* --- Interactive resume lines (click-to-edit + hover AI) --- */
+.resume-page .rline {
+  position: relative;
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+.resume-page li.rline {
+  list-style: disc;
+}
+.resume-page .rline-text {
+  cursor: text;
+  display: inline;
+}
+.resume-page h1.rline .rline-text,
+.resume-page h2.rline .rline-text,
+.resume-page h3.rline .rline-text,
+.resume-page h4.rline .rline-text {
+  display: block;
+}
+.resume-page .rline:hover {
+  background: #f1f5ff;
+  box-shadow: 0 0 0 3px #f1f5ff;
+}
+.resume-page .rline-busy {
+  opacity: 0.45;
+}
+.rline-edit {
+  width: 100%;
+  font: inherit;
+  color: #111827;
+  background: #fff;
+  border: 1px solid var(--primary);
+  border-radius: 5px;
+  padding: 4px 7px;
+  resize: vertical;
+  min-height: 0;
+  line-height: 1.4;
+}
+.rline-tools {
+  display: none;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+  padding-left: 0;
+}
+.resume-page .rline:hover > .rline-tools {
+  display: flex;
+}
+.rline-tools button {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+  border-radius: 5px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.rline-tools button:hover:not(:disabled) {
+  background: #eef2ff;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.rline-tools button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 @media (max-width: 860px) {
   .resume-body.mode-split {
     flex-direction: column;

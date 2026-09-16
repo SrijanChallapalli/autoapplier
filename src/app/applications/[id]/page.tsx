@@ -413,6 +413,7 @@ export default function ApplicationDetailPage({
       <div className="card">
         <ResumeEditor
           appId={app.id}
+          jobId={app.jobId}
           company={app.company}
           title={app.title}
           resumeLabel={app.resumeLabel}
