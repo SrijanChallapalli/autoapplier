@@ -4,25 +4,30 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Application, Job } from "@/lib/types";
 import type { DashboardStats } from "@/lib/service";
+import type { Insights } from "@/lib/insights";
 import { ConfidenceBadge, StatusBadge, scoreColor } from "@/components/ui";
+import { relativeDay } from "@/lib/format";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [apps, setApps] = useState<Application[]>([]);
+  const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   async function load() {
-    const [s, j, a] = await Promise.all([
+    const [s, j, a, i] = await Promise.all([
       fetch("/api/dashboard").then((r) => r.json()),
       fetch("/api/jobs").then((r) => r.json()),
       fetch("/api/applications").then((r) => r.json()),
+      fetch("/api/insights").then((r) => r.json()),
     ]);
     setStats(s);
     setJobs(j);
     setApps(a);
+    setInsights(i);
     setLoading(false);
   }
 
@@ -83,6 +88,62 @@ export default function DashboardPage() {
           <Stat n={stats.submitted} label="Submitted" color="var(--primary)" />
         </div>
       )}
+
+      {insights &&
+        (insights.followUps.length > 0 ||
+          insights.upcomingInterviews.length > 0) && (
+          <div className="card">
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div className="section-label" style={{ marginTop: 0 }}>
+                This week
+              </div>
+              <Link className="btn btn-sm" href="/insights">
+                All insights →
+              </Link>
+            </div>
+            {insights.followUps.map((f) => (
+              <div key={f.applicationId} className="list-item">
+                <div>
+                  <div className="li-title">
+                    <Link href={`/applications/${f.applicationId}`}>
+                      {f.title} · {f.company}
+                    </Link>
+                  </div>
+                  <div
+                    className="li-meta"
+                    style={{ color: f.overdue ? "var(--red)" : "var(--amber)" }}
+                  >
+                    Follow up {relativeDay(f.dueDate)}
+                  </div>
+                </div>
+                <span className={`badge ${f.overdue ? "low" : "medium"}`}>
+                  {f.overdue ? "Overdue" : "Due soon"}
+                </span>
+              </div>
+            ))}
+            {insights.upcomingInterviews.map((s, i) => (
+              <div key={`${s.applicationId}-${i}`} className="list-item">
+                <div>
+                  <div className="li-title">
+                    <Link href={`/applications/${s.applicationId}`}>
+                      {s.stage} · {s.company}
+                    </Link>
+                  </div>
+                  <div className="li-meta">
+                    {s.title} · {relativeDay(s.date)}
+                  </div>
+                </div>
+                <span className="badge primary">Interview</span>
+              </div>
+            ))}
+          </div>
+        )}
 
       {needsAttention.length > 0 && (
         <div className="card">
