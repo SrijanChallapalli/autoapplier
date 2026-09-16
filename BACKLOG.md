@@ -41,6 +41,11 @@ Self-directed tickets toward a production-ready app. Checked = shipped & verifie
 - [x] T24 Robust experience/project parsing (multi-line headers, comma/pipe formats)
 - [x] T25 Target-countries restriction — filters live fetch + blocks out-of-country in matching
 
+## Round 4
+- [x] T26 Insights page — application funnel, response/interview/offer rates,
+      skill-gap analysis over matched jobs, follow-ups & interviews due this
+      week, weekly activity, top companies (pure `insights.ts` + tests)
+
 ## Deferred (needs your input)
 - Neon provisioning + Vercel deploy (needs your Vercel login) — code is ready;
   just set DATABASE_URL + deploy

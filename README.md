@@ -21,6 +21,7 @@ It reduces the repetitive parts of applying (re-typing the same info, re-reading
 11. **Draft answers with AI** (optional) — grounded, first-person drafts for essay/"why this company" questions, using only your real facts.
 12. **Export a packet** — one click copies a clean, portal-ready version of an application's answers.
 13. **Runs on a schedule** — a daily Vercel cron can pull fresh jobs automatically.
+14. **See the shape of your search** — an **Insights** page shows your application funnel (prepared → applied → responded → interviewed → offer) with response / interview / offer rates, the skills that keep coming up on good matches you don't yet cover, follow-ups and interviews due this week, and weekly activity.
 
 The dashboard headline reads exactly like the goal:
 > "8 jobs found today. 5 matched your profile. 2 applications are ready to submit, 3 require your approval, and 0 need you to answer a question."

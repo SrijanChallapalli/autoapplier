@@ -19,7 +19,7 @@ function norm(s: string): string {
   return s.trim().toLowerCase();
 }
 
-function profileSkillSet(profile: Profile): Set<string> {
+export function profileSkillSet(profile: Profile): Set<string> {
   const set = new Set<string>();
   for (const s of profile.skills) set.add(norm(s));
   // Skills implied by experience/projects bullets and tags:
