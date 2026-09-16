@@ -482,6 +482,9 @@ export interface DashboardStats {
   needsInput: number; // low confidence / open questions
   submitted: number;
   headline: string;
+  // Onboarding: whether the user has entered enough profile to get real matches.
+  profileComplete: boolean;
+  totalApplications: number;
 }
 
 function isToday(iso: string): boolean {
@@ -497,6 +500,12 @@ function isToday(iso: string): boolean {
 export async function dashboardStats(): Promise<DashboardStats> {
   const jobs = await listJobs();
   const apps = await listApplications();
+  const profile = await getProfile();
+
+  // "Complete enough to match well": a name plus something to match on.
+  const profileComplete =
+    !!profile.fullName.trim() &&
+    (profile.skills.length > 0 || profile.experience.length > 0);
 
   const foundToday = jobs.filter((j) => isToday(j.createdAt)).length;
   const matched = jobs.filter(
@@ -529,6 +538,8 @@ export async function dashboardStats(): Promise<DashboardStats> {
     needsInput,
     submitted,
     headline,
+    profileComplete,
+    totalApplications: apps.length,
   };
 }
 
