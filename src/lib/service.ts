@@ -295,11 +295,14 @@ export async function generateTailoredResume(
   const job = await getJob(app.jobId);
   const profile = await getProfile();
 
-  // Prefer editing the candidate's real uploaded resume in place; fall back to
-  // building from structured fields when there's no uploaded resume text.
-  const baseResume = profile.resumeText?.trim()
-    ? resumeTextToMarkdown(profile.resumeText)
-    : app.tailoredResume?.trim() || undefined;
+  // Edit in place: tailor whatever is already in the editor (the tailored resume
+  // accumulates the user's edits and starts as their real uploaded resume). Fall
+  // back to the raw uploaded resume, then to building from structured fields.
+  const baseResume =
+    app.tailoredResume?.trim() ||
+    (profile.resumeText?.trim()
+      ? resumeTextToMarkdown(profile.resumeText)
+      : undefined);
 
   if (
     !baseResume &&
@@ -393,47 +396,39 @@ export async function resumeChatForApplication(
     experience: profile.experience,
     projects: profile.projects,
   };
+
+  // Edit the candidate's actual resume in place. Anchor on whatever is currently
+  // in the editor (which starts as their real uploaded resume); only fall back to
+  // rebuilding from structured fields when there is genuinely nothing to edit.
+  const baseResume =
+    (currentResume ?? app.tailoredResume ?? "").trim() ||
+    (profile.resumeText?.trim() ? resumeTextToMarkdown(profile.resumeText) : "");
+
   const system = [
-    "You are a resume coach helping a student tailor their resume to a specific role and pass ATS screens.",
+    "You are a resume coach helping a student tailor their EXISTING resume to a specific role and pass ATS screens.",
+    "You edit the candidate's current resume IN PLACE — you never rebuild it from scratch or reformat it into a different template.",
     "Rules:",
-    "- Use ONLY the candidate's real facts (below). NEVER invent employers, roles, skills, dates, metrics, or bullets.",
-    "- Improve with stronger action verbs, quantified impact (only real numbers they gave), keyword alignment to the job, ordering, and ATS-friendly formatting.",
+    "- Start from the CURRENT RESUME below and PRESERVE it: keep its existing sections, their order, its headings, its wording, and its Markdown conventions ('#', '##', '###', '-') by default.",
+    "- Change ONLY what the user asks for (and what genuinely helps for this role): rephrase, strengthen, reorder, or trim EXISTING content and surface keywords the role emphasizes. Leave every other line exactly as written.",
+    "- Do NOT rename, reorder, add, or drop sections unless the user explicitly asks. Do not impose a new structure and do not remove content just because the role doesn't mention it.",
+    "- Use ONLY the candidate's real facts (the resume below, plus the facts JSON as a boundary). NEVER invent or add employers, roles, skills, dates, metrics, or bullets that aren't already there. If a required skill is missing, do not claim it.",
+    "- Improve with stronger action verbs, quantified impact (only real numbers they already gave), keyword alignment, and ATS-friendly phrasing.",
     "",
     "OUTPUT FORMAT — follow EXACTLY:",
-    "- If the user asks you to change, rewrite, improve, tailor, shorten, reorder, or edit the resume or ANY part of it (e.g. 'make my bullets stronger'), you MUST return the COMPLETE updated resume — EVERY section from the name line through education — inside ONE fenced block that starts with ```resume and ends with ```.",
-    "- NEVER return only the changed lines or a single section. Always reproduce the whole resume with your edits merged in, so it can replace the current one.",
+    "- If the user asks you to change, rewrite, improve, tailor, shorten, reorder, or edit the resume or ANY part of it (e.g. 'make my bullets stronger'), return the COMPLETE updated resume — the whole document with your edits merged in — inside ONE fenced block that starts with ```resume and ends with ```.",
+    "- NEVER return only the changed lines or a single section. Always reproduce the whole resume so it can replace the current one, keeping the original's own formatting.",
     "- Put at most one short sentence of commentary BEFORE the block. Nothing after it.",
     "- Only when the user asks a pure question that requests NO change (e.g. 'what keywords am I missing?') may you answer in plain prose with no block.",
-    "",
-    "Use this EXACT ATS-safe Markdown structure inside the block (it is rendered to a PDF):",
-    "- '# Full Name' then a contact line of items separated by ' | ' (no icons/labels).",
-    "- Sections as '## Heading' with these names in order: Education, Experience, Projects, Technical Skills (optional '## Summary' first).",
-    "- Entry headers '### Left | Right' — Experience: '### Job Title | Mon YYYY – Mon YYYY' then 'Company | City, State'; Education: '### University | City, State' then 'Degree, Major | Mon YYYY – Mon YYYY'; Projects: '### Name | Tech, Stack'.",
-    "- Bullets start with '- '. Technical Skills as 'Label: a, b, c' lines. No tables, columns, icons, or emojis.",
-    "Example:",
-    "Here's the updated resume:",
-    "```resume",
-    "# Jane Doe",
-    "jane@email.com | (555) 123-4567 | linkedin.com/in/jane | github.com/jane",
-    "",
-    "## Experience",
-    "### Software Engineer Intern | May 2025 – Aug 2025",
-    "Acme Corp | Remote",
-    "- Built X that improved Y by Z%",
-    "",
-    "## Education",
-    "### State University | City, ST",
-    "B.S. in Computer Science | Aug 2023 – May 2027",
-    "```",
     "",
     `TARGET ROLE: ${job?.title ?? app.title} at ${job?.company ?? app.company}`,
     "",
     `JOB DESCRIPTION:\n${(job?.description ?? "").slice(0, 2500)}`,
     "",
-    `CANDIDATE FACTS (JSON):\n${JSON.stringify(facts, null, 2)}`,
-    (currentResume ?? app.tailoredResume)
-      ? `\nCURRENT TAILORED RESUME:\n${currentResume ?? app.tailoredResume}`
-      : "",
+    baseResume
+      ? `CURRENT RESUME (edit this in place — this is the document to preserve and return):\n${baseResume}`
+      : "The candidate has no resume yet — build a first draft strictly from the facts below.",
+    "",
+    `CANDIDATE FACTS (JSON — a boundary on what is true; do not exceed it):\n${JSON.stringify(facts, null, 2)}`,
   ].join("\n");
 
   const reply = await aiChatMessages(
