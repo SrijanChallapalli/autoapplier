@@ -75,7 +75,7 @@ const KNOWN_SECTIONS = new Set([
 ]);
 
 // Trailing date range like "May 2024 – Aug 2024", "2024 – Present", "2025".
-const DATE_TAIL =
+export const DATE_TAIL =
   /\s+((?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z.]*\s*\d{4}|\d{4}|Present)(?:\s*[–—-]\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z.]*\s*\d{4}|\d{4}|Present))?)\s*$/i;
 
 function stripInline(s: string): string {

@@ -8,7 +8,7 @@ import {
   type Hunk,
 } from "@/lib/resumeDiff";
 import { downloadResumePdf, resumeFileName } from "@/lib/resumePdf";
-import { renderResumeHtml } from "@/lib/markdown";
+import { renderResumeDocHtml } from "@/lib/markdown";
 
 type Mode = "auto" | "review";
 type View = "edit" | "split" | "preview";
@@ -79,7 +79,7 @@ export function ResumeEditor({
   const [hunks, setHunks] = useState<Hunk[] | null>(null);
   const [accepted, setAccepted] = useState<Set<number>>(new Set());
 
-  const previewHtml = useMemo(() => renderResumeHtml(resume), [resume]);
+  const previewHtml = useMemo(() => renderResumeDocHtml(resume), [resume]);
   const hasContent = resume.trim().length > 0;
 
   useEffect(() => {

@@ -5,6 +5,8 @@
 // inject markup. Used both for the live preview and for the printable PDF doc.
 // ---------------------------------------------------------------------------
 
+import { parseResumeDoc } from "./resumeParse";
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -96,11 +98,122 @@ export function renderResumeHtml(md: string): string {
   return out.join("\n");
 }
 
+// ---------------------------------------------------------------------------
+// Structured resume renderer — the on-screen twin of the PDF export.
+//
+// The live preview used to run the raw Markdown through the generic renderer
+// above, which knows nothing about entry headers, dates, or the two-column
+// "Jake's-template" layout — so the preview looked nothing like the PDF you
+// download. This renders from the SAME parsed structure the PDF uses
+// (parseResumeDoc), so the preview is WYSIWYG: centered name, contact line,
+// ruled section headings, bold-left / date-right entry headers, italic
+// company/location subtitles, and real bullets. Styles are inlined so it looks
+// identical in the app preview and in a standalone print document.
+// ---------------------------------------------------------------------------
+
+// Turn the parsed structure into HTML matching the PDF's Jake's-template look.
+// `scale` lets the print document use slightly larger, print-tuned sizing.
+function renderResumeStructure(md: string): string {
+  const doc = parseResumeDoc(md);
+  const out: string[] = [];
+
+  const row = (
+    left: string,
+    right: string | undefined,
+    opts: { bold?: boolean; italic?: boolean; muted?: boolean },
+  ) => {
+    const weight = opts.bold ? "font-weight:700;" : "";
+    const style = opts.italic ? "font-style:italic;" : "";
+    const color = opts.muted ? "color:#374151;" : "";
+    const rightHtml = right
+      ? `<span style="white-space:nowrap;padding-left:12px;${style}${color}">${escapeHtml(
+          right,
+        )}</span>`
+      : "";
+    return `<div class="rr-row" style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:2px 0 0;"><span style="${weight}${style}${color}">${escapeHtml(
+      left,
+    )}</span>${rightHtml}</div>`;
+  };
+
+  if (doc.name) {
+    out.push(
+      `<div class="rr-name" style="text-align:center;font-size:1.85em;font-weight:700;letter-spacing:.01em;margin:0 0 3px;">${escapeHtml(
+        doc.name,
+      )}</div>`,
+    );
+  }
+  if (doc.contact.length) {
+    const items = doc.contact
+      .map((c) => escapeHtml(c))
+      .join('<span style="color:#9ca3af;padding:0 4px;">|</span>');
+    out.push(
+      `<div class="rr-contact" style="text-align:center;color:#374151;font-size:.92em;margin:0 0 12px;overflow-wrap:anywhere;">${items}</div>`,
+    );
+  }
+
+  for (const section of doc.sections) {
+    out.push('<div class="rr-section" style="margin:13px 0 0;">');
+    out.push(
+      `<div class="rr-head" style="text-transform:uppercase;font-weight:700;font-size:.95em;letter-spacing:.06em;border-bottom:1px solid #111827;padding-bottom:2px;margin:0 0 6px;">${escapeHtml(
+        section.heading,
+      )}</div>`,
+    );
+
+    for (const line of section.lines) {
+      if (line.label) {
+        out.push(
+          `<div style="margin:0 0 3px;"><strong>${escapeHtml(
+            line.label,
+          )}</strong> ${escapeHtml(line.text)}</div>`,
+        );
+      } else {
+        out.push(`<div style="margin:0 0 4px;">${escapeHtml(line.text)}</div>`);
+      }
+    }
+
+    section.entries.forEach((entry, idx) => {
+      const top = idx > 0 || section.lines.length ? "6px" : "3px";
+      out.push(`<div class="rr-entry" style="margin:${top} 0 0;">`);
+      out.push(row(entry.title, entry.titleRight, { bold: true }));
+      if (entry.subtitle) {
+        out.push(
+          row(entry.subtitle, entry.subtitleRight, { italic: true, muted: true }),
+        );
+      }
+      if (entry.bullets.length) {
+        out.push(
+          `<ul style="margin:3px 0 0;padding-left:18px;">${entry.bullets
+            .map(
+              (b) =>
+                `<li style="margin:0 0 2px;">${escapeHtml(b)}</li>`,
+            )
+            .join("")}</ul>`,
+        );
+      }
+      out.push("</div>");
+    });
+
+    out.push("</div>");
+  }
+
+  return out.join("\n");
+}
+
+// Render resume Markdown to the structured, PDF-matching HTML used by the
+// editor preview. Wraps the body in a serif container so it mirrors the PDF's
+// Times layout. Falls back to the generic renderer only if parsing yields
+// nothing usable (e.g. a stray note with no name or sections).
+export function renderResumeDocHtml(md: string): string {
+  const structured = renderResumeStructure(md);
+  if (!structured.trim()) return renderResumeHtml(md);
+  return `<div class="rr-doc" style="font-family:Georgia,'Times New Roman',Times,serif;line-height:1.42;">${structured}</div>`;
+}
+
 // A complete, self-contained HTML document for printing / saving as PDF.
 // Styles are embedded so it renders identically in a print iframe with no
 // dependency on the app's stylesheet.
 export function resumePrintDocument(md: string, title: string): string {
-  const body = renderResumeHtml(md);
+  const body = renderResumeDocHtml(md);
   return `<!doctype html>
 <html>
 <head>
@@ -111,7 +224,7 @@ export function resumePrintDocument(md: string, title: string): string {
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: Georgia, "Times New Roman", Times, serif;
     color: #111827;
     font-size: 10.5pt;
     line-height: 1.4;

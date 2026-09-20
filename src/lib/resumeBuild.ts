@@ -9,6 +9,7 @@
 // ---------------------------------------------------------------------------
 
 import type { Profile } from "./types";
+import { DATE_TAIL } from "./resumeParse";
 
 // Common resume section headings — matched case-insensitively as a whole line.
 const SECTION_WORDS = [
@@ -35,16 +36,37 @@ function isSectionHeading(line: string): boolean {
   return isUpper && wordCount <= 4 && !LEADING_BULLET.test(line);
 }
 
+// A previous emitted line that "dangles" — ends mid-phrase — so the next line
+// is almost certainly a wrapped continuation of it, not a new item.
+const DANGLING_END = /[,;:(/–—-]$/;
+// A line that begins like a continuation of the previous one (lowercase word,
+// digit, or an opening paren) rather than a fresh heading/entry/bullet.
+const CONTINUATION_START = /^[a-z0-9(]/;
+
 // Convert a verbatim, uploaded resume's text into light Markdown WITHOUT
 // changing any wording: the first line becomes the name heading, recognizable
 // section titles become `##`, and bullet-like lines are normalized to `-`.
 // Everything else is passed through exactly. This is the base the editor loads
 // so tailoring edits sections of the real resume instead of a rebuild.
+//
+// PDF text extraction frequently wraps one logical line (a bullet, a skills
+// entry) across several physical lines, so a single bullet arrives as a "- …"
+// line followed by un-bulleted fragments. We re-join those wrapped fragments
+// into the line they belong to, so a bullet stays one bullet in the preview and
+// the PDF instead of breaking into stray paragraphs.
 export function resumeTextToMarkdown(text: string): string {
   const raw = (text ?? "").replace(/\r\n?/g, "\n").replace(/ /g, " ");
   const lines = raw.split("\n");
   const out: string[] = [];
   let seenName = false;
+
+  // True when the previous emitted line can absorb a wrapped continuation
+  // (a bullet or a plain line — never a heading, the name, or a blank).
+  const prevAbsorbs = (): boolean => {
+    if (out.length === 0) return false;
+    const last = out[out.length - 1];
+    return last.trim() !== "" && !/^#{1,2}\s/.test(last);
+  };
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -64,6 +86,39 @@ export function resumeTextToMarkdown(text: string): string {
     }
     if (LEADING_BULLET.test(line)) {
       out.push(`- ${line.replace(LEADING_BULLET, "").trim()}`);
+      continue;
+    }
+    // Role line ("Title … May 2025 – Aug 2025") whose previous line is a short
+    // plain line (the employer/school): pair them as one entry so the company
+    // stays with its role instead of floating to the top of the section. The
+    // company becomes the entry heading; the role keeps its date on the right.
+    const dateM = trimmed.match(DATE_TAIL);
+    if (dateM && dateM.index && !trimmed.includes(" | ") && out.length) {
+      const prev = out[out.length - 1];
+      const prevText = prev.trim();
+      const prevIsEmployer =
+        prevText !== "" &&
+        !/^#{1,3}\s/.test(prev) &&
+        !/^-\s/.test(prev) &&
+        !prevText.includes(" | ") &&
+        prevText.split(/\s+/).length <= 7 &&
+        !DATE_TAIL.test(prevText);
+      if (prevIsEmployer) {
+        out[out.length - 1] = `### ${prevText}`;
+        const role = trimmed.slice(0, dateM.index).trim();
+        out.push(role ? `${role} | ${dateM[1].trim()}` : dateM[1].trim());
+        continue;
+      }
+    }
+
+    // Plain line: fold it back into the previous line when it reads as a
+    // wrapped continuation, otherwise keep it as its own line.
+    if (
+      prevAbsorbs() &&
+      (CONTINUATION_START.test(trimmed) ||
+        DANGLING_END.test(out[out.length - 1].trim()))
+    ) {
+      out[out.length - 1] = `${out[out.length - 1].replace(/\s+$/, "")} ${trimmed}`;
       continue;
     }
     out.push(trimmed);
