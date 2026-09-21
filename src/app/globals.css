@@ -556,17 +556,20 @@ ul.clean li {
   background: var(--surface-2);
   padding: 20px;
   overflow: auto;
-  max-height: 720px;
+  max-height: 78vh;
 }
 
-/* The rendered resume "page" — always looks like white paper, both themes. */
+/* The rendered resume "page" — a true US Letter sheet (8.5in x 11in at 96dpi)
+   with 0.5in margins, so the preview reflects the real printed page size. */
 .resume-page {
   background: #ffffff;
   color: #111827;
-  max-width: 640px;
+  width: 816px; /* 8.5in @ 96dpi */
+  min-height: 1056px; /* 11in @ 96dpi */
+  max-width: 100%;
   margin: 0 auto;
-  padding: 40px 44px;
-  border-radius: 4px;
+  padding: 48px; /* 0.5in margins */
+  border-radius: 2px;
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12), 0 6px 20px rgba(16, 24, 40, 0.1);
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 13.5px;
